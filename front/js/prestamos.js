@@ -28,7 +28,7 @@ async function cargarAlumno(matriculaOpcional = null) {
     tabla.innerHTML = '<tr><td colspan="3">Cargando...</td></tr>';
 
     try {
-        const response = await fetch(`https://localhost:7082/api/Prestamos/pendientes/${matriculaActual}`);
+        const response = await fetch(`${API_URL}/Prestamos/pendientes/${matriculaActual}`);
 
         if (response.status === 404) {
             alert("❌ Alumno no encontrado o matrícula incorrecta.");
@@ -72,7 +72,7 @@ async function realizarPrestamo() {
     msgDiv.style.color = "blue";
 
     try {
-        const response = await fetch('https://localhost:7082/api/Prestamos/registrar', {
+        const response = await fetch('${API_URL}/Prestamos/registrar', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -113,7 +113,7 @@ async function devolverMaterial(idReserva) {
     if (!confirm("¿Confirmar devolución? El stock aumentará.")) return;
 
     try {
-        const response = await fetch(`https://localhost:7082/api/Prestamos/devolver/${idReserva}`, {
+        const response = await fetch(`${API_URL}/Prestamos/devolver/${idReserva}`, {
             method: 'PUT'
         });
 
@@ -192,7 +192,7 @@ if (inputBusquedaMat) {
         }
 
         try {
-            const response = await fetch(`https://localhost:7082/api/Materiales/buscar?termino=${texto}`);
+            const response = await fetch(`${API_URL}/Materiales/buscar?termino=${texto}`);
             const materiales = await response.json();
 
             if (materiales.length > 0) {
@@ -240,7 +240,7 @@ if (inputBusquedaAlum) {
         }
 
         try {
-            const response = await fetch(`https://localhost:7082/api/Usuarios/buscar?termino=${texto}`);
+            const response = await fetch(`${API_URL}/Usuarios/buscar?termino=${texto}`);
             const usuarios = await response.json();
 
             if (usuarios.length > 0) {
@@ -293,7 +293,7 @@ async function traerDatosHistorial(esCargaExtra = false) {
     const tabla = document.getElementById('tablaHistorial');
     
     try {
-        const response = await fetch(`https://localhost:7082/api/Prestamos/historial?pagina=${paginaActualHistorial}&cantidad=10`);
+        const response = await fetch(`${API_URL}/Prestamos/historial?pagina=${paginaActualHistorial}&cantidad=10`);
         const datos = await response.json();
 
         if (!esCargaExtra) tabla.innerHTML = ''; // Si no es carga extra, limpiamos la tabla
@@ -368,7 +368,7 @@ async function renovarPrestamo(id) {
     if (!confirm("¿Deseas dar 7 días más de plazo para este material?")) return;
 
     try {
-        const response = await fetch(`https://localhost:7082/api/Prestamos/renovar/${id}`, {
+        const response = await fetch(`${API_URL}/Prestamos/renovar/${id}`, {
             method: 'PUT'
         });
 

@@ -1,7 +1,7 @@
 document.addEventListener("DOMContentLoaded", async () => { 
     // 2. Llamada a la API
     try {
-        const response = await fetch('https://localhost:7082/api/dashboard/resumen');
+        const response = await fetch('${API_URL}/dashboard/resumen');
         if (response.ok) {
             const data = await response.json();
             

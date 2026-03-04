@@ -1,4 +1,4 @@
-const API_URL = "https://localhost:7082/api";
+
 
 document.addEventListener('DOMContentLoaded', () => {
     // Cargamos la tabla de personal

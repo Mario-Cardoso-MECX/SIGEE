@@ -33,7 +33,7 @@ async function cargarAlumnos() {
     const puedeEditar = rol === 'Admin' || rol === 'Secretaria';
 
     try {
-        const response = await fetch('https://localhost:7082/api/Usuarios/alumnos');
+        const response = await fetch('${API_URL}/Usuarios/alumnos');
         if (!response.ok) throw new Error("Error al obtener alumnos");
 
         const alumnos = await response.json();
@@ -80,7 +80,7 @@ async function registrarAlumno() {
     const resultado = document.getElementById('resultadoRegistro');
 
     try {
-        const response = await fetch('https://localhost:7082/api/Usuarios/crear', {
+        const response = await fetch('${API_URL}/Usuarios/crear', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
@@ -111,7 +111,7 @@ async function eliminarAlumno(id) {
     }
 
     try {
-        const response = await fetch(`https://localhost:7082/api/Usuarios/${id}`, {
+        const response = await fetch(`${API_URL}/Usuarios/${id}`, {
             method: 'DELETE'
         });
 

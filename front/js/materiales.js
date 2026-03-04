@@ -27,7 +27,7 @@ async function cargarInventario() {
     const puedeEditar = rol === 'Admin' || rol === 'Inventario';
 
     try {
-        const response = await fetch('https://localhost:7082/api/Materiales');
+        const response = await fetch('${API_URL}/Materiales');
         const materiales = await response.json();
         tabla.innerHTML = '';
 
@@ -85,8 +85,8 @@ async function guardarMaterial() {
     // Si hay ID usamos PUT (editar), si no hay ID usamos POST (crear)
     const metodo = id ? 'PUT' : 'POST';
     const url = id 
-        ? `https://localhost:7082/api/Materiales/${id}` 
-        : 'https://localhost:7082/api/Materiales';
+        ? `${API_URL}/Materiales/${id}` 
+        : '${API_URL}/Materiales';
 
     try {
         const response = await fetch(url, {
@@ -116,7 +116,7 @@ async function eliminarMaterial(id) {
     }
 
     try {
-        const response = await fetch(`https://localhost:7082/api/Materiales/${id}`, {
+        const response = await fetch(`${API_URL}/Materiales/${id}`, {
             method: 'DELETE'
         });
 

@@ -3,10 +3,10 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Agregar servicios básicos
+// Agregar servicios bï¿½sicos
 builder.Services.AddControllers();
 
-// CONEXIÓN A BASE DE DATOS 
+// CONEXIï¿½N A BASE DE DATOS 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("CadenaSQL")));
 
@@ -33,6 +33,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseStaticFiles();
 
 app.UseCors("PermitirTodo");
 
