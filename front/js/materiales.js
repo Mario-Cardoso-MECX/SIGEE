@@ -27,7 +27,7 @@ async function cargarInventario() {
     const puedeEditar = rol === 'Admin' || rol === 'Inventario';
 
     try {
-        const response = await fetch('${API_URL}/Materiales');
+        const response = await fetch(`${API_URL}/Materiales`);
         const materiales = await response.json();
         tabla.innerHTML = '';
 
@@ -86,7 +86,7 @@ async function guardarMaterial() {
     const metodo = id ? 'PUT' : 'POST';
     const url = id 
         ? `${API_URL}/Materiales/${id}` 
-        : '${API_URL}/Materiales';
+        : `${API_URL}/Materiales`;
 
     try {
         const response = await fetch(url, {

@@ -72,7 +72,7 @@ async function realizarPrestamo() {
     msgDiv.style.color = "blue";
 
     try {
-        const response = await fetch('${API_URL}/Prestamos/registrar', {
+        const response = await fetch(`${API_URL}/Prestamos/registrar`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
