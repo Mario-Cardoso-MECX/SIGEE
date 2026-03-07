@@ -108,7 +108,7 @@
 }
 
 .card-header h2 {
-    color: #1e293b;
+    color: #27ae60;
     font-size: 1.25rem;
     display: flex;
     align-items: center;
@@ -121,15 +121,17 @@
 }
 
 .search-container .input-wrapper {
-    border: 2px solid #e2e8f0;
+    border: 2px solid #3498db;
     background-color: #f1f5f9;
-    border-radius: 10px;
+    border-radius: 25px;
     padding: 12px 15px;
     font-size: 1rem;
     transition: all 0.3s ease;
-    color: #334155;
+    color: #3498db;
     margin-bottom: 30px;
 }
+
+
 
 /* Contenedor de los Chips (Filtros) */
 .filter-chips {
@@ -232,6 +234,18 @@
 
 .btn-verde:active, .btn-cancelar:active {
     transform: scale(0.98);
+}
+
+.btn-verde {
+    background: #27ae60;
+    color: white;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.fa-check-circle{
+    color: white;
 }
 
 .fa-trash{
