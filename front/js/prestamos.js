@@ -362,7 +362,15 @@ async function traerDatosHistorial(esCargaExtra = false) {
             let fVenceStr = "Sin fecha";
 
             if (esFechaValida && fechaInicio) {
-                const opciones = { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' };
+                const opciones = { 
+                    day: '2-digit', 
+                    month: '2-digit', 
+                    year: 'numeric',
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                };
+                fInicioStr = fechaInicio.toLocaleString('es-MX', opciones);
+                fVenceStr = fechaVencimiento.toLocaleString('es-MX', opciones);
                 fInicioStr = fechaInicio.toLocaleString('es-MX', opciones);
                 fVenceStr = fechaVencimiento.toLocaleString('es-MX', opciones);
             }
