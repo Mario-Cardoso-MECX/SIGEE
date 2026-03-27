@@ -167,6 +167,25 @@ namespace GestorInventarioPrimaria.Controllers
             });
         }
 
+        // NUEVO: GET api/prestamos/historial-alumno/5 (Para el historial individual)
+        [HttpGet("historial-alumno/{usuarioId}")]
+        public async Task<IActionResult> GetHistorialPorAlumno(int usuarioId)
+        {
+            var historial = await _context.Reservas
+                .Include(r => r.Material)
+                .Where(r => r.UsuarioId == usuarioId)
+                .OrderByDescending(r => r.FechaInicio)
+                .Select(r => new {
+                    Material = r.Material.Titulo,
+                    Categoria = r.Material.Categoria,
+                    FechaPrestamo = r.FechaInicio.ToString("dd/MM/yyyy"),
+                    Estado = r.Estatus
+                })
+                .ToListAsync();
+
+            return Ok(historial);
+        }
+
         // GET: api/prestamos/historial?pagina=1&cantidad=10
         [HttpGet("historial")]
         public async Task<ActionResult<IEnumerable<object>>> GetHistorial(int pagina = 1, int cantidad = 10)

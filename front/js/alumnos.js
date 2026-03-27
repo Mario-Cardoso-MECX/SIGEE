@@ -28,7 +28,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- MEMORIA DE SCROLL DOBLE PARA ALUMNOS ---
-    // 1. Guardar scroll de la ventana principal
     window.addEventListener('scroll', () => {
         if (!isRestoringScroll) {
             const inputBuscador = document.getElementById('txtFiltrarAlumnos');
@@ -37,7 +36,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // 2. Guardar scroll interno de la tabla
     const contenedorTabla = document.querySelector('.tabla-container');
     if (contenedorTabla) {
         contenedorTabla.addEventListener('scroll', () => {
@@ -71,20 +69,34 @@ async function cargarAlumnos() {
             return;
         }
 
-        // Variable para carga ultra rápida
         let htmlFilas = '';
 
         alumnos.forEach(a => {
-            // 2. LA MAGIA: Unimos Nombre y Apellidos
             const nombre = a.nombre || "";
             const apellidos = a.apellidos || "";
             const nombreCompleto = `${nombre} ${apellidos}`.trim();
 
-            // 3. Control de acceso para los botones
-            const acciones = puedeEditar 
-                ? `<button onclick="prepararEdicionAlumno(${a.id}, '${nombre.replace(/'/g, "\\'")}', '${apellidos.replace(/'/g, "\\'")}', '${a.grupo}')" class="btn-azul"><i class="fa-solid fa-pen-to-square"></i> Editar</button>
-                   <button onclick="eliminarAlumno(${a.id})" class="btn-rojo"><i class="fa-solid fa-trash"></i> Eliminar</button>` 
-                : `<span style="color:gray; font-size:0.85rem;">Solo lectura</span>`;
+            // Usamos las clases definidas en el CSS
+            const btnHistorial = `<button onclick="verHistorialAlumno(${a.id}, '${nombreCompleto.replace(/'/g, "\\'")}')" class="btn-historial" title="Ver Historial"><i class="fa-solid fa-eye"></i></button>`;
+            
+            let acciones = "";
+            
+            if (puedeEditar) {
+                acciones = `
+                    <div class="acciones-flex">
+                        ${btnHistorial}
+                        <button onclick="prepararEdicionAlumno(${a.id}, '${nombre.replace(/'/g, "\\'")}', '${apellidos.replace(/'/g, "\\'")}', '${a.grupo}')" class="btn-editar-naranja" title="Editar"><i class="fa-solid fa-pen-to-square"></i></button>
+                        <button onclick="eliminarAlumno(${a.id})" class="btn-borrar-rojo" title="Eliminar"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                `;
+            } else {
+                acciones = `
+                    <div class="acciones-flex">
+                        ${btnHistorial}
+                        <span style="color:gray; font-size:0.85rem; margin-left: 5px;">Solo lectura</span>
+                    </div>
+                `;
+            }
 
             htmlFilas += `
                 <tr>
@@ -96,10 +108,8 @@ async function cargarAlumnos() {
             `;
         });
 
-        // Inyectamos todo de golpe
         tabla.innerHTML = htmlFilas;
 
-        // --- RECUPERAR SCROLL AL RECARGAR LA PÁGINA ---
         const inputBuscar = document.getElementById('txtFiltrarAlumnos');
         const termActual = inputBuscar ? inputBuscar.value.toLowerCase().trim() : '';
 
@@ -116,31 +126,27 @@ async function cargarAlumnos() {
     }
 }
 
-// FUNCIÓN MAESTRA PARA RECUPERAR AMBOS SCROLLS
 function restaurarAmbosScrolls(term) {
-    isRestoringScroll = true; // Ponemos el candado
+    isRestoringScroll = true; 
     
     const scrollVentana = sessionStorage.getItem('scroll_alumnos_ventana_' + term);
     const scrollInterno = sessionStorage.getItem('scroll_alumnos_interno_' + term);
     const contenedorTabla = document.querySelector('.tabla-container');
     
     requestAnimationFrame(() => {
-        // 1. Restaurar scroll grandote
         window.scrollTo({ top: scrollVentana ? parseInt(scrollVentana) : 0, behavior: 'instant' });
         
-        // 2. Restaurar scroll pequeño (si existe)
         if (contenedorTabla) {
             contenedorTabla.scrollTop = scrollInterno ? parseInt(scrollInterno) : 0;
         }
         
-        // Quitamos el candado
         setTimeout(() => { isRestoringScroll = false; }, 150); 
     });
 }
 
-// REGISTRAR (Usa el endpoint: /api/Usuarios/crear)
+// REGISTRAR
 async function registrarAlumno() {
-    const id = document.getElementById('txtIdAlumno').value; // Leemos el ID oculto
+    const id = document.getElementById('txtIdAlumno').value;
     const nombre = document.getElementById('nombreAlumno').value.trim().toUpperCase();
     const apellidos = document.getElementById('apellidoAlumno').value.trim().toUpperCase();
     const grado = document.getElementById('gradoAlumno').value;
@@ -175,7 +181,6 @@ async function registrarAlumno() {
             const data = await response.json();
             resultado.innerHTML = `<span style="color:green;">✅ ${data.mensaje}</span>`;
             
-            // Limpiamos y regresamos el diseño a "Modo Registro"
             document.getElementById('formNuevoAlumno').reset();
             document.getElementById('txtIdAlumno').value = "";
             document.querySelector('.card-header h2').innerHTML = `<i class="fas fa-user-plus"></i> Registrar Nuevo Alumno`;
@@ -191,7 +196,7 @@ async function registrarAlumno() {
     }
 }
 
-// ELIMINAR (Usa el endpoint: /api/Usuarios/{id})
+// ELIMINAR
 async function eliminarAlumno(id) {
     const confirmacion = await Swal.fire({
         title: '¿Estás seguro?',
@@ -217,10 +222,9 @@ async function eliminarAlumno(id) {
                     icon: 'success',
                     confirmButtonColor: '#27ae60' 
                 });
-                cargarAlumnos(); // Refrescamos la tabla
+                cargarAlumnos();
             } else {
                 const errorText = await response.text();
-                // Alerta de Error (ej. si debe un libro)
                 Swal.fire({
                     title: 'No se pudo eliminar',
                     text: errorText,
@@ -235,13 +239,12 @@ async function eliminarAlumno(id) {
     }
 }
 
-// Actualizar alumno
+// PREPARAR EDICIÓN
 function prepararEdicionAlumno(id, nombre, apellidos, grupoCompleto) {
     document.getElementById('txtIdAlumno').value = id;
     document.getElementById('nombreAlumno').value = nombre;
     document.getElementById('apellidoAlumno').value = apellidos;
     
-    // Truco: Dividimos "6° A" por el espacio para llenar los select
     if(grupoCompleto) {
         const partes = grupoCompleto.split(" ");
         if(partes.length === 2) {
@@ -250,14 +253,13 @@ function prepararEdicionAlumno(id, nombre, apellidos, grupoCompleto) {
         }
     }
 
-    // Cambiamos los textos para indicar edición
     document.querySelector('.card-header h2').innerHTML = `<i class="fas fa-user-edit"></i> Editando: ${nombre}`;
     document.querySelector('#formNuevoAlumno button[type="submit"]').innerHTML = `<i class="fas fa-save"></i> Guardar Cambios`;
     
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// --- BUSCADOR INTELIGENTE CON DEBOUNCE PARA ALUMNOS ---
+// BUSCADOR INTELIGENTE
 let tiempoEsperaBuscadorAlumnos;
 const inputBuscadorAlumnos = document.getElementById('txtFiltrarAlumnos');
 
@@ -274,33 +276,29 @@ if (inputBuscadorAlumnos) {
                 if (term === '') {
                     r.style.display = ''; 
                 } else {
-                    // Usamos textContent para máxima velocidad
                     r.style.display = r.textContent.toLowerCase().includes(term) ? '' : 'none';
                 }
             });
 
-            // Llamamos a restaurar scrolls
             restaurarAmbosScrolls(term);
-        }, 500); // 500ms de retraso inteligente
+        }, 500); 
     });
-} // <--- AQUÍ ESTABA LA LLAVE FALTANTE QUE SE BORRÓ JUNTO CON EL SCROLL
+} 
 
-// --- PROMOCIÓN MASIVA DE FIN DE CURSO ---
+// PROMOCIÓN MASIVA
 async function promoverCicloEscolar() {
-    // Alerta de confirmación idéntica a la de Eliminar Alumno
     const confirmacion = await Swal.fire({
         title: '¿Estás seguro de cerrar el ciclo?',
         text: "¡Atención! Todos los alumnos subirán un grado automáticamente (Ej. de 1° a 2°) y los alumnos de 6° pasarán a ser Egresados.",
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonColor: '#2c3e50', // Azul marino (combina con el botón)
-        cancelButtonColor: '#94a3b8',  // Gris
+        confirmButtonColor: '#2c3e50', 
+        cancelButtonColor: '#94a3b8',  
         confirmButtonText: '<i class="fas fa-user-graduate" style="color: white;"></i> Sí, promover a todos',
         cancelButtonText: '<i class="fa-solid fa-xmark" style="color: white;"></i> Cancelar'
     });
 
     if (confirmacion.isConfirmed) {
-        // Mostramos una alerta de "Cargando" mientras el servidor hace el trabajo
         Swal.fire({
             title: 'Procesando...',
             text: 'Actualizando grupos de todos los alumnos, por favor espera.',
@@ -321,7 +319,7 @@ async function promoverCicloEscolar() {
                     icon: 'success',
                     confirmButtonColor: '#27ae60'
                 });
-                cargarAlumnos(); // Refresca la tabla automáticamente para ver los cambios
+                cargarAlumnos(); 
             } else {
                 Swal.fire('Error', 'Hubo un problema al promover a los alumnos.', 'error');
             }
@@ -329,5 +327,74 @@ async function promoverCicloEscolar() {
             console.error(error);
             Swal.fire('Error de conexión', 'No se pudo contactar con el servidor.', 'error');
         }
+    }
+}
+
+// --- NUEVO: MOSTRAR HISTORIAL DE LECTURA POR ALUMNO ---
+async function verHistorialAlumno(id, nombre) {
+    Swal.fire({
+        title: `Cargando historial de ${nombre}...`,
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+    });
+
+    try {
+        const response = await fetch(`${API_URL}/Prestamos/historial-alumno/${id}`);
+        if (!response.ok) throw new Error("Error al obtener historial");
+
+        const datos = await response.json();
+
+        if (datos.length === 0) {
+            Swal.fire({
+                title: 'Sin registros',
+                text: `${nombre} aún no ha pedido ningún material en el ciclo.`,
+                icon: 'info',
+                confirmButtonColor: '#3498db'
+            });
+            return;
+        }
+
+        // Construimos la tablita para el Pop-Up
+        let filasTabla = '';
+        datos.forEach(d => {
+            let colorEstado = d.estado === 'Activo' ? '#f39c12' : '#27ae60'; 
+            filasTabla += `
+                <tr style="border-bottom: 1px solid #eee;">
+                    <td style="padding: 10px; text-align: left;"><strong>${d.material}</strong><br><small style="color:gray;">${d.categoria}</small></td>
+                    <td style="padding: 10px;">${d.fechaPrestamo}</td>
+                    <td style="padding: 10px; color: ${colorEstado}; font-weight: bold;">${d.estado}</td>
+                </tr>
+            `;
+        });
+
+        // Ajuste: quitamos el table-layout: fixed solo para esta tabla del modal
+        const tablaHTML = `
+            <div style="max-height: 350px; overflow-y: auto; border: 1px solid #ddd; border-radius: 8px;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem; table-layout: auto !important;">
+                    <thead style="background-color: #2c3e50; color: white; position: sticky; top: 0; z-index: 5;">
+                        <tr>
+                            <th style="padding: 12px 10px; text-align: left; width: 60%;">Material Solicitado</th>
+                            <th style="padding: 12px 10px; text-align: center;">Fecha</th>
+                            <th style="padding: 12px 10px; text-align: center;">Estatus</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${filasTabla}
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+        Swal.fire({
+            title: `<i class="fas fa-book-reader" style="color: #3498db;"></i> Historial de Lectura`,
+            html: `<p style="margin-bottom: 15px; font-weight: bold; color:#2c3e50;">Alumno: ${nombre}</p>${tablaHTML}`,
+            width: '600px',
+            showCloseButton: true,
+            showConfirmButton: false
+        });
+
+    } catch (error) {
+        console.error(error);
+        Swal.fire('Error', 'No se pudo cargar el historial del alumno.', 'error');
     }
 }

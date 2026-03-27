@@ -121,9 +121,9 @@
     background: white;
     border-radius: 12px;
     box-shadow: var(--sombra);
-    max-height: 60vh; /* Activa la altura máxima */
-    min-height: 55vh; /* NUEVO: Evita que la tabla se haga chiquita y brinque la página */
-    overflow-y: auto; /* Activa la barrita de scroll */
+    max-height: 60vh;
+    min-height: 55vh;
+    overflow-y: auto;
 }
 
 table {
@@ -132,7 +132,6 @@ table {
     table-layout: fixed;
 }
 
-/* Congelamos el encabezado para que no se pierda al bajar */
 thead th {
     position: sticky;
     top: 0;
@@ -168,22 +167,37 @@ tbody tr:hover {
     text-align: center;
 }
 
-.fa-trash,
-.fa-pen-to-square{
-    color: #2c3e50;
+/* --- ESTILOS MEJORADOS PARA BOTONES DE ACCIÓN --- */
+.acciones-flex {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    align-items: center;
 }
 
-/* Responsive */
+/* Ajuste general para botones dentro de celdas */
+td button {
+    width: auto !important; /* Evita que se estiren al 100% */
+    padding: 8px 12px !important;
+    border-radius: 6px !important;
+    border: none !important; /* Quitamos el borde gris feo */
+    color: white !important; /* Iconos siempre blancos */
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+/* Colores vibrantes */
+.btn-historial { background-color: #3498db !important; } /* Azul */
+.btn-historial:hover { background-color: #2980b9 !important; }
+
+.btn-editar-naranja { background-color: #f39c12 !important; } /* Naranja */
+.btn-editar-naranja:hover { background-color: #d68910 !important; }
+
+.btn-borrar-rojo { background-color: #e74c3c !important; } /* Rojo */
+.btn-borrar-rojo:hover { background-color: #c0392b !important; }
+
 @media (max-width: 768px) {
     .form-grid {
         grid-template-columns: 1fr;
     }
-}
-
-.btn-azul,
-.btn-rojo{
-    border: 2px solid #2c3e50;
-    color: #2c3e50;
-    border-radius: 4px;
-    padding: 3px;
 }
