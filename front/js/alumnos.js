@@ -1,3 +1,5 @@
+let isRestoringScroll = false; // Candado para el scroll
+
 document.addEventListener('DOMContentLoaded', () => {
     cargarAlumnos();
 
@@ -10,16 +12,35 @@ document.addEventListener('DOMContentLoaded', () => {
         const formRegistro = document.getElementById('formNuevoAlumno');
         
         if (formRegistro) {
-            // Buscamos la "tarjeta" completa que envuelve al formulario para ocultarla toda
             const tarjetaRegistro = formRegistro.closest('.card-accion');
-            
             if (tarjetaRegistro) {
                 tarjetaRegistro.style.display = 'none';
             } else {
-                // Por si acaso no encuentra la tarjeta, ocultamos al menos el formulario
                 formRegistro.style.display = 'none'; 
             }
         }
+    }
+
+    // --- MEMORIA DE SCROLL DOBLE PARA ALUMNOS ---
+    // 1. Guardar scroll de la ventana principal
+    window.addEventListener('scroll', () => {
+        if (!isRestoringScroll) {
+            const inputBuscador = document.getElementById('txtFiltrarAlumnos');
+            const term = inputBuscador ? inputBuscador.value.toLowerCase().trim() : '';
+            sessionStorage.setItem('scroll_alumnos_ventana_' + term, window.scrollY);
+        }
+    });
+
+    // 2. Guardar scroll interno de la tabla
+    const contenedorTabla = document.querySelector('.tabla-container');
+    if (contenedorTabla) {
+        contenedorTabla.addEventListener('scroll', () => {
+            if (!isRestoringScroll) {
+                const inputBuscador = document.getElementById('txtFiltrarAlumnos');
+                const term = inputBuscador ? inputBuscador.value.toLowerCase().trim() : '';
+                sessionStorage.setItem('scroll_alumnos_interno_' + term, contenedorTabla.scrollTop);
+            }
+        });
     }
 });
 
@@ -44,8 +65,11 @@ async function cargarAlumnos() {
             return;
         }
 
+        // Variable para carga ultra rápida
+        let htmlFilas = '';
+
         alumnos.forEach(a => {
-            // 2. LA MAGIA: Unimos Nombre y Apellidos (manejando nulos por si acaso)
+            // 2. LA MAGIA: Unimos Nombre y Apellidos
             const nombre = a.nombre || "";
             const apellidos = a.apellidos || "";
             const nombreCompleto = `${nombre} ${apellidos}`.trim();
@@ -56,7 +80,7 @@ async function cargarAlumnos() {
                    <button onclick="eliminarAlumno(${a.id})" class="btn-rojo"><i class="fa-solid fa-trash"></i> Eliminar</button>` 
                 : `<span style="color:gray; font-size:0.85rem;">Solo lectura</span>`;
 
-            tabla.innerHTML += `
+            htmlFilas += `
                 <tr>
                     <td><strong>${a.matricula}</strong></td>
                     <td>${nombreCompleto}</td>
@@ -65,10 +89,47 @@ async function cargarAlumnos() {
                 </tr>
             `;
         });
+
+        // Inyectamos todo de golpe
+        tabla.innerHTML = htmlFilas;
+
+        // --- RECUPERAR SCROLL AL RECARGAR LA PÁGINA ---
+        const inputBuscar = document.getElementById('txtFiltrarAlumnos');
+        const termActual = inputBuscar ? inputBuscar.value.toLowerCase().trim() : '';
+
+        if (termActual !== '') {
+            const evento = new Event('input');
+            inputBuscar.dispatchEvent(evento);
+        } else {
+            restaurarAmbosScrolls('');
+        }
+
     } catch (error) {
         console.error(error);
         tabla.innerHTML = '<tr><td colspan="4" style="color:red; text-align:center;">Error de servidor. Revisa la base de datos.</td></tr>';
     }
+}
+
+// FUNCIÓN MAESTRA PARA RECUPERAR AMBOS SCROLLS
+function restaurarAmbosScrolls(term) {
+    isRestoringScroll = true; // Ponemos el candado
+    
+    const scrollVentana = sessionStorage.getItem('scroll_alumnos_ventana_' + term);
+    const scrollInterno = sessionStorage.getItem('scroll_alumnos_interno_' + term);
+    const contenedorTabla = document.querySelector('.tabla-container');
+    
+    requestAnimationFrame(() => {
+        // 1. Restaurar scroll grandote
+        window.scrollTo({ top: scrollVentana ? parseInt(scrollVentana) : 0, behavior: 'instant' });
+        
+        // 2. Restaurar scroll pequeño (si existe)
+        if (contenedorTabla) {
+            contenedorTabla.scrollTop = scrollInterno ? parseInt(scrollInterno) : 0;
+        }
+        
+        // Quitamos el candado
+        setTimeout(() => { isRestoringScroll = false; }, 150); 
+    });
 }
 
 // REGISTRAR (Usa el endpoint: /api/Usuarios/crear)
@@ -87,7 +148,6 @@ async function registrarAlumno() {
     
     const resultado = document.getElementById('resultadoRegistro');
 
-    // 🚀 LA MAGIA: Usamos tu variable global API_URL
     const url = id 
         ? `${API_URL}/Usuarios/editar-alumno/${id}` 
         : `${API_URL}/Usuarios/crear`;
@@ -191,18 +251,35 @@ function prepararEdicionAlumno(id, nombre, apellidos, grupoCompleto) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// Escuchamos lo que el usuario escribe en tiempo real
-document.getElementById('txtFiltrarAlumnos').addEventListener('input', function(e) {
-    const textoBusqueda = e.target.value.toLowerCase();
-    const filas = document.querySelectorAll('#tablaAlumnosBody tr');
+// --- BUSCADOR INTELIGENTE CON DEBOUNCE PARA ALUMNOS ---
+let tiempoEsperaBuscadorAlumnos;
+const inputBuscadorAlumnos = document.getElementById('txtFiltrarAlumnos');
 
-    filas.forEach(fila => {
-        const contenidoFila = fila.innerText.toLowerCase();
+if (inputBuscadorAlumnos) {
+    inputBuscadorAlumnos.addEventListener('input', (e) => {
+        const term = e.target.value.toLowerCase().trim();
         
-        if (contenidoFila.includes(textoBusqueda)) {
-            fila.style.display = '';
-        } else {
-            fila.style.display = 'none';
-        }
+        clearTimeout(tiempoEsperaBuscadorAlumnos);
+        
+        tiempoEsperaBuscadorAlumnos = setTimeout(() => {
+            const rows = document.querySelectorAll('#tablaAlumnosBody tr');
+            
+            rows.forEach(r => {
+                if (term === '') {
+                    r.style.display = ''; 
+                } else {
+                    // Usamos textContent para máxima velocidad
+                    r.style.display = r.textContent.toLowerCase().includes(term) ? '' : 'none';
+                }
+            });
+
+            // Llamamos a restaurar scrolls
+            restaurarAmbosScrolls(term);
+        }, 500); // 500ms de retraso inteligente
     });
-});
+
+    // Auto-scroll al hacer focus en el buscador
+    inputBuscadorAlumnos.addEventListener('focus', function() {
+        this.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+}

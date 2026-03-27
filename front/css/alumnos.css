@@ -116,12 +116,13 @@
     border-color: var(--azul-claro);
 }
 
-/* Tabla de Alumnos */
+/* --- TABLA DE ALUMNOS CON SCROLL INTERNO --- */
 .tabla-container {
     background: white;
     border-radius: 12px;
     box-shadow: var(--sombra);
-    overflow: hidden;
+    max-height: 60vh; /* Activa la altura máxima */
+    overflow-y: auto; /* Activa la barrita de scroll */
 }
 
 table {
@@ -130,9 +131,14 @@ table {
     table-layout: fixed;
 }
 
-thead {
+/* Congelamos el encabezado para que no se pierda al bajar */
+thead th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
     background-color: var(--azul-primario);
     color: white;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }
 
 th, td {

@@ -1,3 +1,6 @@
+// Variable global para bloquear el guardado accidental del scroll
+let isRestoringScroll = false;
+
 document.addEventListener('DOMContentLoaded', () => {
     cargarInventario();
 
@@ -10,12 +13,33 @@ document.addEventListener('DOMContentLoaded', () => {
         const formMaterial = document.getElementById('formMaterial');
         
         if (formMaterial) {
-            // Buscamos la tarjeta blanca que envuelve al formulario y la ocultamos
             const tarjetaFormulario = formMaterial.closest('.card-accion');
             if (tarjetaFormulario) {
                 tarjetaFormulario.style.display = 'none';
             }
         }
+    }
+
+    // --- MEMORIA DE SCROLL DOBLE (Página completa y Tabla interna) ---
+    // 1. Guardar el scroll grandote (ventana)
+    window.addEventListener('scroll', () => {
+        if (!isRestoringScroll) {
+            const inputBuscador = document.getElementById('txtBuscarInv');
+            const term = inputBuscador ? inputBuscador.value.toLowerCase().trim() : '';
+            sessionStorage.setItem('scroll_ventana_' + term, window.scrollY);
+        }
+    });
+
+    // 2. Guardar el scroll pequeño (tabla)
+    const contenedorTabla = document.querySelector('.tabla-container');
+    if (contenedorTabla) {
+        contenedorTabla.addEventListener('scroll', () => {
+            if (!isRestoringScroll) {
+                const inputBuscador = document.getElementById('txtBuscarInv');
+                const term = inputBuscador ? inputBuscador.value.toLowerCase().trim() : '';
+                sessionStorage.setItem('scroll_interno_' + term, contenedorTabla.scrollTop);
+            }
+        });
     }
 });
 
@@ -31,23 +55,24 @@ async function cargarInventario() {
         const materiales = await response.json();
         tabla.innerHTML = '';
 
+        let htmlFilas = '';
+
         materiales.forEach(m => {
-            // ... (deja tu lógica del stock exacto como la tienes) ...
             const stock = m.stockDisponible;
             let estiloStock = ''; let aviso = '';
+            
             if (m.categoria !== "Salón") {
                 if (stock === 0) { estiloStock = "color:#dc2626; font-weight:bold; background:#fee2e2; padding:2px 5px; border-radius:4px;"; aviso = " ¡AGOTADO!"; } 
                 else if (stock <= 3) { estiloStock = "color:#d97706; font-weight:bold;"; aviso = " (Poco)"; }
                 else if (stock >= 4) { estiloStock = "color:#059669; font-weight:bold;"; aviso = " Suficiente"; }
             }
 
-            // Inyectamos permisos
             const acciones = puedeEditar 
                 ? `<button onclick="prepararEdicion(${m.id}, '${m.titulo.replace(/'/g, "\\'")}', '${m.categoria}', ${m.stockDisponible})" class="btn-azul"><i class="fas fa-edit"></i> Editar</button>
                    <button onclick="eliminarMaterial(${m.id})" class="btn-rojo"><i class="fa-solid fa-trash"></i> Eliminar</button>`
                 : `<span style="color:gray; font-size:0.85rem;">Solo lectura</span>`;
         
-            tabla.innerHTML += `
+            htmlFilas += `
                 <tr>
                     <td>${m.id}</td>
                     <td><strong>${m.titulo}</strong></td>
@@ -57,15 +82,59 @@ async function cargarInventario() {
                 </tr>
             `;
         });
+        
+        tabla.innerHTML = htmlFilas;
+
+        // --- RECUPERAR FILTROS AL RECARGAR LA PÁGINA (F5) ---
+        const inputBuscar = document.getElementById('txtBuscarInv');
+        const termActual = inputBuscar ? inputBuscar.value.toLowerCase().trim() : '';
+
+        if (termActual !== '') {
+            const evento = new Event('input');
+            inputBuscar.dispatchEvent(evento);
+            
+            document.querySelectorAll('.filter-chips .chip').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(`'${inputBuscar.value}'`)) {
+                    btn.classList.add('active');
+                }
+            });
+        } else {
+            // Si no hay filtro, restauramos ambos scrolls para la vista general
+            restaurarAmbosScrolls('');
+        }
+
     } catch (error) { 
         console.error(error); 
         tabla.innerHTML = '<tr><td colspan="5">Error al cargar datos.</td></tr>';
     }
 }
 
+// FUNCIÓN MAESTRA PARA RECUPERAR AMBOS SCROLLS
+function restaurarAmbosScrolls(term) {
+    isRestoringScroll = true; // Ponemos el candado
+    
+    const scrollVentana = sessionStorage.getItem('scroll_ventana_' + term);
+    const scrollInterno = sessionStorage.getItem('scroll_interno_' + term);
+    const contenedorTabla = document.querySelector('.tabla-container');
+    
+    requestAnimationFrame(() => {
+        // 1. Restaurar scroll grandote
+        window.scrollTo({ top: scrollVentana ? parseInt(scrollVentana) : 0, behavior: 'instant' });
+        
+        // 2. Restaurar scroll pequeño (si existe)
+        if (contenedorTabla) {
+            contenedorTabla.scrollTop = scrollInterno ? parseInt(scrollInterno) : 0;
+        }
+        
+        // Quitamos el candado
+        setTimeout(() => { isRestoringScroll = false; }, 150); 
+    });
+}
+
 // FUNCIÓN PARA GUARDAR (CREAR O EDITAR)
 async function guardarMaterial() {
-    const id = document.getElementById('txtIdMaterial').value; // Campo oculto
+    const id = document.getElementById('txtIdMaterial').value;
     const titulo = document.getElementById('txtTitulo').value.trim();
     const categoria = document.getElementById('selCategoria').value;
     const stock = document.getElementById('txtStock').value;
@@ -86,23 +155,19 @@ async function guardarMaterial() {
 
     let stockFinal = parseInt(stock);
 
-    // 🚀 CANDADO PARA SALONES
     if (categoria === "Salón") {
-        stockFinal = 1; // Un salón físico es único
+        stockFinal = 1;
     }
 
     const material = {
         id: id ? parseInt(id) : 0,
         titulo: titulo,
         categoria: categoria,
-        stockDisponible: stockFinal // Usamos la variable validada
+        stockDisponible: stockFinal 
     };
 
-    // Si hay ID usamos PUT (editar), si no hay ID usamos POST (crear)
     const metodo = id ? 'PUT' : 'POST';
-    const url = id 
-        ? `${API_URL}/Materiales/${id}` 
-        : `${API_URL}/Materiales`;
+    const url = id ? `${API_URL}/Materiales/${id}` : `${API_URL}/Materiales`;
 
     try {
         const response = await fetch(url, {
@@ -117,11 +182,11 @@ async function guardarMaterial() {
                 text: id ? "Material actualizado con éxito" : "Material creado con éxito",
                 icon: 'success',
                 confirmButtonColor: '#27ae60',
-                timer: 2000, // Se cierra solo en 2 segundos
+                timer: 2000, 
                 showConfirmButton: false
             });
             limpiarFormulario();
-            cargarInventario(); // Recarga la tabla
+            cargarInventario(); 
         } else {
             const error = await response.text();
             alert("❌ Error al guardar: " + error);
@@ -134,19 +199,17 @@ async function guardarMaterial() {
 
 // FUNCIÓN PARA ELIMINAR
 async function eliminarMaterial(id) {
-    // 1. Lanzamos la alerta de confirmación
     const confirmacion = await Swal.fire({
         title: '¿Estás seguro?',
         text: "El material será eliminado del inventario de forma permanente.",
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonColor: '#e74c3c', // Rojo
-        cancelButtonColor: '#94a3b8',  // Gris
+        confirmButtonColor: '#e74c3c', 
+        cancelButtonColor: '#94a3b8',  
         confirmButtonText: '<i class="fa-solid fa-trash"></i> Sí, eliminar',
         cancelButtonText: '<i class="fa-solid fa-xmark"></i> Cancelar'
     });
 
-    // 2. Evaluamos si el usuario confirmó
     if (confirmacion.isConfirmed) {
         try {
             const response = await fetch(`${API_URL}/Materiales/${id}`, {
@@ -154,16 +217,14 @@ async function eliminarMaterial(id) {
             });
 
             if (response.ok) {
-                // 3. Alerta de éxito
                 Swal.fire({
                     title: '¡Eliminado!',
                     text: 'El material ha sido borrado correctamente.',
                     icon: 'success',
                     confirmButtonColor: '#27ae60'
                 });
-                cargarInventario(); // Refrescamos la tabla
+                cargarInventario(); 
             } else {
-                // El servidor podría responder que no se puede eliminar si hay préstamos activos
                 const errorMsg = await response.text();
                 Swal.fire({
                     title: 'No se pudo eliminar',
@@ -181,6 +242,13 @@ async function eliminarMaterial(id) {
 
 // FILTRAR POR CATEGORÍA
 function filtrarPorCategoria(categoria) {
+    document.querySelectorAll('.filter-chips .chip').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(`'${categoria}'`)) {
+            btn.classList.add('active');
+        }
+    });
+
     const inputBusqueda = document.getElementById('txtBuscarInv');
     inputBusqueda.value = categoria;
     
@@ -206,13 +274,33 @@ function limpiarFormulario() {
     document.getElementById('btnGuardar').innerText = "Guardar en Inventario";
 }
 
-document.getElementById('txtBuscarInv').addEventListener('input', (e) => {
-    const term = e.target.value.toLowerCase();
-    const rows = document.querySelectorAll('#tablaInventarioBody tr');
-    rows.forEach(r => {
-        r.style.display = r.innerText.toLowerCase().includes(term) ? '' : 'none';
+// --- BUSCADOR INTELIGENTE Y RESTAURACIÓN DOBLE ---
+let tiempoEsperaBuscador;
+const inputBuscador = document.getElementById('txtBuscarInv');
+
+if (inputBuscador) {
+    inputBuscador.addEventListener('input', (e) => {
+        const term = e.target.value.toLowerCase().trim();
+        
+        clearTimeout(tiempoEsperaBuscador);
+        
+        tiempoEsperaBuscador = setTimeout(() => {
+            const rows = document.querySelectorAll('#tablaInventarioBody tr');
+            
+            rows.forEach(r => {
+                if (term === '') {
+                    r.style.display = ''; 
+                } else {
+                    r.style.display = r.textContent.toLowerCase().includes(term) ? '' : 'none';
+                }
+            });
+
+            // Llamamos a la función maestra para recuperar ambos scrolls
+            restaurarAmbosScrolls(term);
+
+        }, 500); 
     });
-});
+}
 
 // --- CONTROL INTELIGENTE DE STOCK POR CATEGORÍA ---
 const selectCategoria = document.getElementById('selCategoria');
@@ -221,18 +309,15 @@ const inputStock = document.getElementById('txtStock');
 if (selectCategoria && inputStock) {
     selectCategoria.addEventListener('change', (e) => {
         if (e.target.value === "Salón") {
-            // Si es Salón: Forzamos a 1, bloqueamos escritura y lo pintamos de gris
             inputStock.value = 1;
             inputStock.setAttribute('readonly', true);
             inputStock.style.backgroundColor = "#f1f5f9"; 
             inputStock.style.cursor = "not-allowed";
         } else {
-            // Si es Libro u otro: Liberamos el input
             inputStock.removeAttribute('readonly');
             inputStock.style.backgroundColor = "#fff";
             inputStock.style.cursor = "text";
             
-            // Solo limpiamos si venía de estar bloqueado en 1
             if (inputStock.value == "1" && inputStock.hasAttribute('readonly')) {
                 inputStock.value = ""; 
             }
