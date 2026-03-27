@@ -21,6 +21,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // NUEVO: El botón de promoción SOLO lo debe ver el Admin (Directora)
+    if (rol !== 'Admin') {
+        const btnPromocion = document.getElementById('btnPromocion');
+        if (btnPromocion) btnPromocion.style.display = 'none';
+    }
+
     // --- MEMORIA DE SCROLL DOBLE PARA ALUMNOS ---
     // 1. Guardar scroll de la ventana principal
     window.addEventListener('scroll', () => {
@@ -282,4 +288,51 @@ if (inputBuscadorAlumnos) {
     inputBuscadorAlumnos.addEventListener('focus', function() {
         this.scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
+}
+
+// --- PROMOCIÓN MASIVA DE FIN DE CURSO ---
+async function promoverCicloEscolar() {
+    // Alerta de confirmación idéntica a la de Eliminar Alumno
+    const confirmacion = await Swal.fire({
+        title: '¿Estás seguro de cerrar el ciclo?',
+        text: "¡Atención! Todos los alumnos subirán un grado automáticamente (Ej. de 1° a 2°) y los alumnos de 6° pasarán a ser Egresados.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#2c3e50', // Azul marino (combina con el botón)
+        cancelButtonColor: '#94a3b8',  // Gris
+        confirmButtonText: '<i class="fas fa-user-graduate" style="color: white;"></i> Sí, promover a todos',
+        cancelButtonText: '<i class="fa-solid fa-xmark" style="color: white;"></i> Cancelar'
+    });
+
+    if (confirmacion.isConfirmed) {
+        // Mostramos una alerta de "Cargando" mientras el servidor hace el trabajo
+        Swal.fire({
+            title: 'Procesando...',
+            text: 'Actualizando grupos de todos los alumnos, por favor espera.',
+            allowOutsideClick: false,
+            didOpen: () => { Swal.showLoading() }
+        });
+
+        try {
+            const response = await fetch(`${API_URL}/Usuarios/promocion-masiva`, {
+                method: 'POST'
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                Swal.fire({
+                    title: '¡Ciclo Actualizado!',
+                    text: data.mensaje,
+                    icon: 'success',
+                    confirmButtonColor: '#27ae60'
+                });
+                cargarAlumnos(); // Refresca la tabla automáticamente para ver los cambios
+            } else {
+                Swal.fire('Error', 'Hubo un problema al promover a los alumnos.', 'error');
+            }
+        } catch (error) {
+            console.error(error);
+            Swal.fire('Error de conexión', 'No se pudo contactar con el servidor.', 'error');
+        }
+    }
 }

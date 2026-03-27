@@ -248,5 +248,50 @@ namespace GestorInventarioPrimaria.Controllers
 
             return Ok(new { mensaje = "✅ Personal eliminado correctamente." });
         }
+
+        // POST: api/Usuarios/promocion-masiva
+        [HttpPost("promocion-masiva")]
+        public async Task<IActionResult> PromocionMasiva()
+        {
+            // Solo traemos a los alumnos
+            var alumnos = await _context.Usuarios
+                                        .Where(u => u.Rol == "Alumno")
+                                        .ToListAsync();
+
+            int promovidos = 0;
+            int egresados = 0;
+
+            foreach (var alumno in alumnos)
+            {
+                if (string.IsNullOrWhiteSpace(alumno.Grupo)) continue;
+
+                // El formato de tu grupo es "1° A", lo separamos por el espacio
+                string[] partes = alumno.Grupo.Split(' ');
+                
+                if (partes.Length >= 2)
+                {
+                    string grado = partes[0]; // Extrae "1°"
+                    string letra = partes[1]; // Extrae "A"
+
+                    switch (grado)
+                    {
+                        case "1°": alumno.Grupo = $"2° {letra}"; promovidos++; break;
+                        case "2°": alumno.Grupo = $"3° {letra}"; promovidos++; break;
+                        case "3°": alumno.Grupo = $"4° {letra}"; promovidos++; break;
+                        case "4°": alumno.Grupo = $"5° {letra}"; promovidos++; break;
+                        case "5°": alumno.Grupo = $"6° {letra}"; promovidos++; break;
+                        case "6°": alumno.Grupo = "Egresado"; egresados++; break;
+                        // Si ya dice "Egresado", el sistema lo ignora y no hace nada
+                    }
+                }
+            }
+
+            // Guardamos todos los cambios de golpe
+            await _context.SaveChangesAsync();
+
+            return Ok(new { 
+                mensaje = $"¡Promoción exitosa! {promovidos} alumnos subieron de grado y {egresados} niños se marcaron como Egresados." 
+            });
+        }
     }
 }
