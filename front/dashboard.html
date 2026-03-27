@@ -6,10 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel Principal - Gestor Primaria</title>
     
-
     <link rel="stylesheet" href="css/reset.css">
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/dashboard.css">
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
@@ -50,6 +51,22 @@
                     <i class="fas fa-hand-holding card-icon"></i>
                 </div>
             </div>
+
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <h3><i class="fas fa-trophy"></i> Top 5 Libros Más Leídos</h3>
+                    <div class="canvas-container">
+                        <canvas id="topLibrosChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3><i class="fas fa-chart-bar"></i> Préstamos por Mes (Este Año)</h3>
+                    <div class="canvas-container">
+                        <canvas id="prestamosMesChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
         </main>
     </div>
 
