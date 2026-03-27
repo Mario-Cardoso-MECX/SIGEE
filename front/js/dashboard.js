@@ -1,5 +1,9 @@
 document.addEventListener("DOMContentLoaded", async () => { 
-    // 1. Cargar las tarjetas de Resumen Numérico
+    // Leemos quién inició sesión
+    const sesion = JSON.parse(localStorage.getItem('usuarioSesion')) || {};
+    const rol = sesion.rol;
+
+    // 1. Cargar las tarjetas de Resumen Numérico (Esto lo pueden ver todos)
     try {
         const response = await fetch(`${API_URL}/dashboard/resumen`);
         if (response.ok) {
@@ -17,8 +21,18 @@ document.addEventListener("DOMContentLoaded", async () => {
         console.error("Error al conectar con el Dashboard:", error);
     }
 
-    // 2. Cargar las Gráficas Visuales
-    cargarGraficas();
+    // 2. Control de Acceso a las Gráficas
+    const seccionGraficas = document.querySelector('.charts-grid');
+
+    if (rol === 'Admin') {
+        // Si es la Directora, cargamos la información y dibujamos las gráficas
+        cargarGraficas();
+    } else {
+        // Si es Docente, Secretaria o Inventario, ocultamos toda la sección
+        if (seccionGraficas) {
+            seccionGraficas.style.display = 'none';
+        }
+    }
 });
 
 async function cargarGraficas() {
