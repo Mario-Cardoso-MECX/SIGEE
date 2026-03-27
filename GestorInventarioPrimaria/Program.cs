@@ -9,10 +9,10 @@ builder.Services.AddControllers();
 
 // --- LÓGICA TODOTERRENO PARA LA BASE DE DATOS ---
 // Por defecto lee la cadena normal (SmarterASP en prod, o LocalDB en dev)
-string cadenaConexion = builder.Configuration.GetConnectionString("CadenaSQL");
+string cadenaConexion = builder.Configuration.GetConnectionString("CadenaSQL") ?? "";
 
 // TRUCO MAESTRO: Si detecta que está en la carpeta de la escuela (C:\SIGE), cambia a SQL Express automáticamente
-if (Directory.Exists(@"C:\SIGE") && !builder.Environment.IsDevelopment())
+if (Directory.Exists(@"C:\SIGE") && builder.Environment.EnvironmentName != "Development")
 {
     var cadenaIIS = builder.Configuration.GetConnectionString("CadenaSQL_IIS");
     if (!string.IsNullOrEmpty(cadenaIIS))
