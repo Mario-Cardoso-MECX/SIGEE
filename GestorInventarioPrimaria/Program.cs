@@ -1,14 +1,30 @@
 using GestorInventarioPrimaria.Data;
 using Microsoft.EntityFrameworkCore;
+using System.IO; // <-- NECESARIO PARA DETECTAR LA CARPETA
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Agregar servicios b�sicos
+// Agregar servicios básicos
 builder.Services.AddControllers();
 
-// CONEXI�N A BASE DE DATOS 
+// --- LÓGICA TODOTERRENO PARA LA BASE DE DATOS ---
+// Por defecto lee la cadena normal (SmarterASP en prod, o LocalDB en dev)
+string cadenaConexion = builder.Configuration.GetConnectionString("CadenaSQL");
+
+// TRUCO MAESTRO: Si detecta que está en la carpeta de la escuela (C:\SIGE), cambia a SQL Express automáticamente
+if (Directory.Exists(@"C:\SIGE") && !builder.Environment.IsDevelopment())
+{
+    var cadenaIIS = builder.Configuration.GetConnectionString("CadenaSQL_IIS");
+    if (!string.IsNullOrEmpty(cadenaIIS))
+    {
+        cadenaConexion = cadenaIIS;
+    }
+}
+
+// CONEXIÓN A BASE DE DATOS 
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("CadenaSQL")));
+    options.UseSqlServer(cadenaConexion));
+// ------------------------------------------------
 
 builder.Services.AddCors(options =>
 {
@@ -34,7 +50,10 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.UseStaticFiles();
+// --- CONFIGURACIÓN PARA ACCESO A wwwroot EN IIS ---
+app.UseDefaultFiles(); // <-- AGREGA ESTO: Permite cargar el login.html sin escribir rutas raras
+app.UseStaticFiles();  // <-- ESTE YA LO TENÍAS: Es el que da acceso físico a los archivos de wwwroot/front
+// --------------------------------------------------
 
 app.UseCors("PermitirTodo");
 

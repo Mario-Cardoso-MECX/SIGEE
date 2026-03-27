@@ -1,11 +1,16 @@
 // front/js/config.js
 
-// Forma 1: Manual (cambias la variable manualmente antes de subir)
-// const API_URL = "https://localhost:7082/api"; 
-// const API_URL = "http://josuemc-001-site1.rtempurl.com/api";
+let API_URL = "";
 
-// Forma 2: Automática (¡Recomendada!)
-// Detecta si estás en localhost; si no, usa la URL de tu servidor
-const API_URL = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
-    ? "https://localhost:7082/api"
-    : "http://josuemc-001-site1.rtempurl.com/api"; // <-- Pon aquí la URL de tu servidor en producción
+// 1. Detecta si estás en Internet (SmarterASP)
+if (window.location.hostname.includes("josuemc-001-site1.rtempurl.com")) {
+    API_URL = "http://josuemc-001-site1.rtempurl.com/api";
+} 
+// 2. Detecta si estás en Visual Studio o Live Server (Desarrollo local)
+else if (window.location.port === "7082" || window.location.port === "5500") {
+    API_URL = "https://localhost:7082/api";
+} 
+// 3. Si no es VS ni Internet, asume que es el IIS de la primaria (Puerto 8080 u otro)
+else {
+    API_URL = window.location.origin + "/api"; 
+}
