@@ -103,12 +103,14 @@
                 <div class="card-header">
                     <h2><i class="fas fa-history"></i> Últimos Movimientos</h2>
                 </div>
-                <div class="filter-bar-orange">
-                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; color: #9a3412; font-weight: bold;">
-                        <input type="checkbox" id="chkSoloDeudores" onchange="filtrarDeudores()" style="width: 18px; height: 18px; accent-color: #f97316;"> 
-                        Ver solo alumnos que deben material (Pendientes y Atrasados)
-                    </label>
+                
+                <div class="filter-bar-orange" style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                    <strong style="color: #9a3412;"><i class="fas fa-filter"></i> Filtrar historial:</strong>
+                    <button class="chip active" onclick="filtrarHistorial('Todos', this)">Todos</button>
+                    <button class="chip" onclick="filtrarHistorial('Pendientes', this)">⏳ En tiempo</button>
+                    <button class="chip btn-vencidos" onclick="filtrarHistorial('Vencidos', this)">⚠️ Vencidos</button>
                 </div>
+
                 <div class="tabla-container">
                     <table id="tablaGeneralHistorial">
                         <thead>

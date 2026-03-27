@@ -1,6 +1,7 @@
 // Variable global para recordar con quién estamos trabajando
 let matriculaActual = "";
 let paginaActualHistorial = 1;
+let filtroActual = 'Todos'; // Memoria del filtro activo
 
 /**
  * 1. CARGAR DATOS DEL ALUMNO (Se llama al seleccionar de la lista o al buscar)
@@ -29,7 +30,6 @@ async function cargarAlumno(matriculaOpcional = null) {
         const response = await fetch(`${API_URL}/Prestamos/pendientes/${matriculaActual}`);
 
         if (response.status === 404) {
-            // 🚀 SweetAlert para "No encontrado"
             Swal.fire({ title: 'No encontrado', text: 'Alumno no encontrado o matrícula incorrecta.', icon: 'warning', confirmButtonColor: '#f39c12' });
             lblMatricula.innerText = "No encontrado";
             bloquearPanel(true);
@@ -77,15 +77,12 @@ async function realizarPrestamo() {
             })
         });
 
-        // 🚀 EL ESCUDO ANTI-CRASH: Leemos como texto primero
         const textResponse = await response.text();
         let data = {};
         
         try {
-            // Intentamos leerlo como JSON
             data = JSON.parse(textResponse); 
         } catch (e) {
-            // Si C# mandó texto plano (como el error de stock), lo guardamos aquí
             data = { mensaje: textResponse }; 
         }
 
@@ -104,7 +101,6 @@ async function realizarPrestamo() {
 
             cargarAlumno(matriculaActual); 
         } else {
-            // Ahora sí mostrará el mensaje exacto de tu C# ("❌ No hay disponibilidad...")
             Swal.fire('No se pudo prestar', data.mensaje || "Error al registrar el préstamo", 'error');
             msgDiv.innerText = "";
         }
@@ -120,13 +116,12 @@ async function realizarPrestamo() {
  * 3. DEVOLVER MATERIAL (PUT)
  */
 async function devolverMaterial(idReserva) {
-    // 🚀 Modal de confirmación premium
     const confirmacion = await Swal.fire({
         title: '¿Confirmar devolución?',
         text: "El material será devuelto y el stock volverá a estar disponible.",
         icon: 'question',
         showCancelButton: true,
-        confirmButtonColor: '#27ae60', // Verde alegre
+        confirmButtonColor: '#27ae60', 
         cancelButtonColor: '#94a3b8',
         confirmButtonText: '<i class="fas fa-check-circle"></i> Sí, devolver',
         cancelButtonText: 'Cancelar'
@@ -165,7 +160,6 @@ function renderizarTabla(lista) {
     const sesion = JSON.parse(localStorage.getItem('usuarioSesion')) || {};
     const rol = sesion.rol;
     
-    // Solo Admin e Inventario pueden gestionar devoluciones
     const puedeGestionar = rol === 'Admin' || rol === 'Inventario';
 
     if (lista.length === 0) {
@@ -179,7 +173,6 @@ function renderizarTabla(lista) {
         const esAtrasado = hoy > fechaLimite;
         const horaFormateada = fechaLimite.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-        // Si puede gestionar, pinta el botón rojo. Si no, un texto gris.
         const btnDevolver = puedeGestionar 
             ? `<button onclick="devolverMaterial(${item.idReserva})" class="btn-rojo">Devolver</button>`
             : `<span style="color:gray; font-size:0.85rem;">Solo lectura</span>`;
@@ -226,7 +219,7 @@ if (inputBusquedaMat) {
                 listaSugMat.innerHTML = '';
                 materiales.forEach(m => {
                     const item = document.createElement('div');
-                    item.className = "sugerencia-item"; // Puedes darle estilos en CSS
+                    item.className = "sugerencia-item";
                     item.style.padding = '10px';
                     item.style.cursor = 'pointer';
                     item.style.borderBottom = '1px solid #eee';
@@ -254,7 +247,7 @@ if (inputBusquedaMat) {
     });
 }
 
-// --- BUSCADOR DE USUARIOS (ALUMNOS Y DOCENTES) ---
+// --- BUSCADOR DE USUARIOS ---
 const inputBusquedaAlum = document.getElementById('txtBusquedaAlumno');
 const listaSugAlum = document.getElementById('listaSugerenciasAlumno');
 
@@ -277,7 +270,6 @@ if (inputBusquedaAlum) {
                     const apellidosStr = u.apellidos || "";
                     const nombreCompleto = `${nombreStr} ${apellidosStr}`.trim();
 
-                    // VALIDACIÓN DE ROL: Distinguimos visualmente a Docentes de Alumnos
                     const etiquetaRol = u.rol === 'Docente' || u.rol === 'Admin' 
                         ? `<span style="color:#e74c3c; font-weight:bold;">[${u.rol}]</span>` 
                         : `<span style="color:#3498db; font-weight:bold;">[Alumno - Grupo: ${u.grupo || 'N/A'}]</span>`;
@@ -288,18 +280,16 @@ if (inputBusquedaAlum) {
                     item.style.cursor = 'pointer';
                     item.style.borderBottom = '1px solid #eee';
                     
-                    // Mostramos el nombre, la matrícula y su rol/grupo
                     item.innerHTML = `<strong>${nombreCompleto}</strong> <br> <small>Mat: ${u.matricula} ${etiquetaRol}</small>`;
                     
                     item.onclick = () => {
                         inputBusquedaAlum.value = nombreCompleto;
                         matriculaActual = u.matricula;
 
-                        // Actualizamos la tarjeta azul de la UI con el nombre y el ROL
                         document.getElementById('lblNombreAlumnoActivo').innerHTML = `${nombreCompleto} <strong style="color:#2c3e50;">(${u.rol})</strong>`;
                         document.getElementById('lblMatriculaActiva').innerText = u.matricula;
                         
-                        cargarAlumno(u.matricula); // Carga automática de sus deudas
+                        cargarAlumno(u.matricula); 
                         listaSugAlum.style.display = 'none';
                     };
                     listaSugAlum.appendChild(item);
@@ -312,21 +302,30 @@ if (inputBusquedaAlum) {
     });
 }
 
-// Cerrar listas si se hace clic fuera
 document.addEventListener('click', (e) => {
     if (listaSugMat && e.target !== inputBusquedaMat) listaSugMat.style.display = 'none';
     if (listaSugAlum && e.target !== inputBusquedaAlum) listaSugAlum.style.display = 'none';
 });
 
-// Cargar historial al abrir la página
-document.addEventListener('DOMContentLoaded', cargarHistorial);
+document.addEventListener('DOMContentLoaded', () => {
+    const sesion = JSON.parse(localStorage.getItem('usuarioSesion')) || {};
+    const rol = sesion.rol;
+
+    if (rol !== 'Admin' && rol !== 'Inventario') {
+        const cards = document.querySelectorAll('.card-accion');
+        if(cards[0]) cards[0].style.display = 'none'; 
+        if(cards[1]) cards[1].style.display = 'none'; 
+    }
+    
+    cargarHistorial();
+});
 
 async function cargarHistorial() {
-    paginaActualHistorial = 1; // Reiniciamos a la página 1
+    paginaActualHistorial = 1;
     const tabla = document.getElementById('tablaHistorial');
     tabla.innerHTML = '<tr><td colspan="4" style="text-align:center;">Cargando...</td></tr>';
 
-    await traerDatosHistorial(false); // false significa "no es carga extra, es limpieza"
+    await traerDatosHistorial(false);
 }
 
 async function traerDatosHistorial(esCargaExtra = false) {
@@ -336,7 +335,7 @@ async function traerDatosHistorial(esCargaExtra = false) {
         const response = await fetch(`${API_URL}/Prestamos/historial?pagina=${paginaActualHistorial}&cantidad=10`);
         const datos = await response.json();
 
-        if (!esCargaExtra) tabla.innerHTML = ''; // Si no es carga extra, limpiamos la tabla
+        if (!esCargaExtra) tabla.innerHTML = ''; 
 
         if (datos.length === 0 && esCargaExtra) {
             Swal.fire({
@@ -371,8 +370,6 @@ async function traerDatosHistorial(esCargaExtra = false) {
                 };
                 fInicioStr = fechaInicio.toLocaleString('es-MX', opciones);
                 fVenceStr = fechaVencimiento.toLocaleString('es-MX', opciones);
-                fInicioStr = fechaInicio.toLocaleString('es-MX', opciones);
-                fVenceStr = fechaVencimiento.toLocaleString('es-MX', opciones);
             }
 
             let estiloFila = "";
@@ -380,11 +377,11 @@ async function traerDatosHistorial(esCargaExtra = false) {
 
             if (h.estado === "Activo") {
                 if (esFechaValida && hoy > fechaVencimiento) {
-                    // ROJO: Atrasado 
+                    // ROJO: Vencido 
                     estiloFila = "background-color: #fef2f2; color: #991b1b; border-left: 5px solid #dc2626;";
                     badgeEstado = `<span style="font-weight:bold;">⚠️ ATRASADO (Vence: ${fVenceStr})</span>`;
                 } else {
-                    // NARANJA: Pendiente 
+                    // NARANJA: Pendiente en tiempo
                     estiloFila = "background-color: #fff7ed; color: #9a3412; border-left: 5px solid #f97316;";
                     badgeEstado = `<span style="font-weight:bold;">Pendiente (Entrega: ${fVenceStr})</span>`;
                 }
@@ -408,9 +405,10 @@ async function traerDatosHistorial(esCargaExtra = false) {
             tabla.innerHTML += fila;
         });
 
-        // Añadimos (o movemos al final) el botón de "Cargar más"
         actualizarBotonCargarMas(datos.length);
-        filtrarDeudores();
+        
+        // Reaplicar el filtro actual después de cargar datos
+        aplicarFiltroActual();
 
     } catch (error) {
         console.error("Error historial:", error);
@@ -418,13 +416,12 @@ async function traerDatosHistorial(esCargaExtra = false) {
 }
 
 async function renovarPrestamo(id) {
-    // 🚀 Modal de confirmación premium para renovar
     const confirmacion = await Swal.fire({
         title: '¿Extender plazo?',
         text: "Se otorgarán 7 días adicionales para entregar este material.",
         icon: 'info',
         showCancelButton: true,
-        confirmButtonColor: '#3498db', // Azul claro
+        confirmButtonColor: '#3498db', 
         cancelButtonColor: '#94a3b8',
         confirmButtonText: '<i class="fas fa-clock"></i> Sí, extender plazo',
         cancelButtonText: 'Cancelar'
@@ -454,34 +451,45 @@ async function renovarPrestamo(id) {
         }
     }
 }
-function filtrarDeudores() {
-    const mostrarSoloDeudores = document.getElementById('chkSoloDeudores').checked;
+
+// --- NUEVA LÓGICA DE FILTROS ---
+function filtrarHistorial(tipo, botonHtml = null) {
+    filtroActual = tipo; // Guardamos en memoria qué filtro está activo
+    
+    // Cambiar la clase "active" visualmente si se hizo clic en un botón
+    if (botonHtml) {
+        document.querySelectorAll('.filter-bar-orange .chip').forEach(btn => btn.classList.remove('active'));
+        botonHtml.classList.add('active');
+    }
+
     const filas = document.querySelectorAll('#tablaHistorial tr');
 
     filas.forEach(fila => {
-        const esAtrasado = fila.innerHTML.includes('⚠️ ATRASADO');
-        const esPendiente = fila.innerHTML.includes('Pendiente');
+        // Ignorar la fila del botón "Cargar más" y el mensaje de carga
+        if (fila.id === 'filaCargarMas' || fila.innerText.includes('Cargando')) return;
 
-        if (mostrarSoloDeudores) {
-            // Si el checkbox está marcado, mostramos la fila si cumple cualquiera de las dos
-            if (esAtrasado || esPendiente) {
-                fila.style.display = '';
-            } else {
-                fila.style.display = 'none'; 
-            }
-        } else {
-            // Si no está marcado, mostramos todo el historial (incluyendo devueltos)
+        const esAtrasado = fila.innerHTML.includes('⚠️ ATRASADO');
+        const esPendiente = fila.innerHTML.includes('Pendiente'); // Préstamos en tiempo
+
+        if (tipo === 'Todos') {
             fila.style.display = '';
+        } else if (tipo === 'Pendientes') {
+            fila.style.display = esPendiente ? '' : 'none';
+        } else if (tipo === 'Vencidos') {
+            fila.style.display = esAtrasado ? '' : 'none';
         }
     });
 }
 
+function aplicarFiltroActual() {
+    const botonActivo = document.querySelector('.filter-bar-orange .chip.active');
+    filtrarHistorial(filtroActual, botonActivo);
+}
+
 function actualizarBotonCargarMas(cantidadRecibida) {
-    // Eliminamos el botón viejo si existe
     const botonViejo = document.getElementById('filaCargarMas');
     if (botonViejo) botonViejo.remove();
 
-    // Solo mostramos el botón si recibimos 10 registros (lo que indica que podría haber más)
     if (cantidadRecibida === 10) {
         const tabla = document.getElementById('tablaHistorial');
         const botonHTML = `
@@ -501,18 +509,3 @@ function cargarSiguientePagina() {
     paginaActualHistorial++;
     traerDatosHistorial(true);
 }
-
-// Cargar historial y ocultar paneles de creación si no tienen permiso
-document.addEventListener('DOMContentLoaded', () => {
-    const sesion = JSON.parse(localStorage.getItem('usuarioSesion')) || {};
-    const rol = sesion.rol;
-
-    // 🚀 EL CAMBIO: Si NO es Admin y NO es Inventario, adiós paneles de préstamo
-    if (rol !== 'Admin' && rol !== 'Inventario') {
-        const cards = document.querySelectorAll('.card-accion');
-        if(cards[0]) cards[0].style.display = 'none'; // Oculta buscar alumno
-        if(cards[1]) cards[1].style.display = 'none'; // Oculta realizar préstamo
-    }
-    
-    cargarHistorial();
-});

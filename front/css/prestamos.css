@@ -162,6 +162,39 @@ tbody tr:hover { background-color: #fff7ed; } /* Hover cálido para préstamos *
     border-bottom: 1px solid #fed7aa;
 }
 
+/* --- BOTONES DE FILTRO TIPO PASTILLA --- */
+.chip {
+    padding: 8px 15px;
+    border-radius: 20px;
+    border: 1px solid #dee2e6;
+    background: #ffffff;
+    color: #475569;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.chip:hover {
+    background: #f1f5f9;
+    transform: translateY(-2px);
+}
+
+.chip.active {
+    background: #3498db;
+    color: white;
+    border-color: #3498db;
+    box-shadow: 0 4px 10px rgba(52, 152, 219, 0.3);
+}
+
+/* Botón especial para los vencidos */
+.btn-vencidos.active {
+    background: #dc2626 !important; /* Rojo intenso */
+    border-color: #dc2626 !important;
+    box-shadow: 0 4px 10px rgba(220, 38, 38, 0.3) !important;
+    color: white !important;
+}
+
+
 .sugerencias-dropdown {
     position: absolute;
     top: 100%;
