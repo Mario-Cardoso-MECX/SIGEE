@@ -283,12 +283,7 @@ if (inputBuscadorAlumnos) {
             restaurarAmbosScrolls(term);
         }, 500); // 500ms de retraso inteligente
     });
-
-    // Auto-scroll al hacer focus en el buscador
-    inputBuscadorAlumnos.addEventListener('focus', function() {
-        this.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    });
-}
+} // <--- AQUÍ ESTABA LA LLAVE FALTANTE QUE SE BORRÓ JUNTO CON EL SCROLL
 
 // --- PROMOCIÓN MASIVA DE FIN DE CURSO ---
 async function promoverCicloEscolar() {

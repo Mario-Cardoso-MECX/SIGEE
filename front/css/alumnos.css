@@ -122,6 +122,7 @@
     border-radius: 12px;
     box-shadow: var(--sombra);
     max-height: 60vh; /* Activa la altura máxima */
+    min-height: 55vh; /* NUEVO: Evita que la tabla se haga chiquita y brinque la página */
     overflow-y: auto; /* Activa la barrita de scroll */
 }
 
