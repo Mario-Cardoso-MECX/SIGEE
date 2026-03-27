@@ -1,15 +1,14 @@
-// Variable global para recordar con quién estamos trabajando
+// Variables globales
 let matriculaActual = "";
 let paginaActualHistorial = 1;
 let filtroActual = 'Todos'; // Memoria del filtro activo
+let isRestoringScroll = false; // Candado para el scroll
 
 /**
- * 1. CARGAR DATOS DEL ALUMNO (Se llama al seleccionar de la lista o al buscar)
- * @param {string} matriculaOpcional - Permite pasar la matrícula directamente
+ * 1. CARGAR DATOS DEL ALUMNO
  */
 async function cargarAlumno(matriculaOpcional = null) {
     const inputBusqueda = document.getElementById('txtBusquedaAlumno');
-    const panel = document.getElementById('panelOperaciones');
     const infoDiv = document.getElementById('infoAlumno');
     const lblMatricula = document.getElementById('lblMatriculaActiva');
     const tabla = document.getElementById('tablaPendientes');
@@ -307,6 +306,7 @@ document.addEventListener('click', (e) => {
     if (listaSugAlum && e.target !== inputBusquedaAlum) listaSugAlum.style.display = 'none';
 });
 
+// EVENTOS INICIALES (Incluye listeners de Scroll Doble)
 document.addEventListener('DOMContentLoaded', () => {
     const sesion = JSON.parse(localStorage.getItem('usuarioSesion')) || {};
     const rol = sesion.rol;
@@ -317,8 +317,49 @@ document.addEventListener('DOMContentLoaded', () => {
         if(cards[1]) cards[1].style.display = 'none'; 
     }
     
+    // --- MEMORIA DE SCROLL DOBLE (Ventana y Tablas) ---
+    // 1. Guardar scroll de la ventana principal
+    window.addEventListener('scroll', () => {
+        if (!isRestoringScroll) {
+            sessionStorage.setItem('scroll_prestamos_ventana_' + filtroActual, window.scrollY);
+        }
+    });
+
+    // 2. Guardar scroll de cada tablita interna (pendientes y el historial general)
+    const contenedoresTabla = document.querySelectorAll('.tabla-container');
+    contenedoresTabla.forEach((contenedor, index) => {
+        contenedor.addEventListener('scroll', () => {
+            if (!isRestoringScroll) {
+                // index 0 puede ser la de pendientes, index 1 la de historial
+                sessionStorage.setItem('scroll_prestamos_interno_' + index + '_' + filtroActual, contenedor.scrollTop);
+            }
+        });
+    });
+    
     cargarHistorial();
 });
+
+// FUNCIÓN PARA RESTAURAR TODOS LOS SCROLLS
+function restaurarAmbosScrolls(filtro) {
+    isRestoringScroll = true; // Ponemos el candado
+    
+    const scrollVentana = sessionStorage.getItem('scroll_prestamos_ventana_' + filtro);
+    
+    requestAnimationFrame(() => {
+        // 1. Restaurar scroll grandote
+        window.scrollTo({ top: scrollVentana ? parseInt(scrollVentana) : 0, behavior: 'instant' });
+        
+        // 2. Restaurar scroll de las tablas pequeñas
+        const contenedoresTabla = document.querySelectorAll('.tabla-container');
+        contenedoresTabla.forEach((contenedor, index) => {
+            const scrollInterno = sessionStorage.getItem('scroll_prestamos_interno_' + index + '_' + filtro);
+            contenedor.scrollTop = scrollInterno ? parseInt(scrollInterno) : 0;
+        });
+        
+        // Quitamos el candado después de un pequeñísimo delay
+        setTimeout(() => { isRestoringScroll = false; }, 150); 
+    });
+}
 
 async function cargarHistorial() {
     paginaActualHistorial = 1;
@@ -407,7 +448,7 @@ async function traerDatosHistorial(esCargaExtra = false) {
 
         actualizarBotonCargarMas(datos.length);
         
-        // Reaplicar el filtro actual después de cargar datos
+        // Reaplicar el filtro y restaurar la memoria del scroll de golpe
         aplicarFiltroActual();
 
     } catch (error) {
@@ -465,11 +506,10 @@ function filtrarHistorial(tipo, botonHtml = null) {
     const filas = document.querySelectorAll('#tablaHistorial tr');
 
     filas.forEach(fila => {
-        // Ignorar la fila del botón "Cargar más" y el mensaje de carga
         if (fila.id === 'filaCargarMas' || fila.innerText.includes('Cargando')) return;
 
         const esAtrasado = fila.innerHTML.includes('⚠️ ATRASADO');
-        const esPendiente = fila.innerHTML.includes('Pendiente'); // Préstamos en tiempo
+        const esPendiente = fila.innerHTML.includes('Pendiente'); 
 
         if (tipo === 'Todos') {
             fila.style.display = '';
@@ -479,6 +519,9 @@ function filtrarHistorial(tipo, botonHtml = null) {
             fila.style.display = esAtrasado ? '' : 'none';
         }
     });
+
+    // Llamamos a restaurar scrolls después de filtrar
+    restaurarAmbosScrolls(tipo);
 }
 
 function aplicarFiltroActual() {

@@ -119,11 +119,13 @@
     filter: grayscale(0.5);
 }
 
-/* --- Tablas estilo Alumnos --- */
+/* --- Tablas estilo Alumnos (CON SCROLL INTERNO MAGICO) --- */
 .tabla-container {
     background: var(--blanco);
     border-radius: 0 0 12px 12px;
-    overflow-x: auto;
+    max-height: 55vh; /* Altura máxima para no estirar la pantalla */
+    overflow-y: auto; /* Scroll vertical */
+    overflow-x: auto; /* Scroll horizontal si es necesario */
 }
 
 table {
@@ -131,9 +133,14 @@ table {
     border-collapse: collapse;
 }
 
-thead {
+/* Encabezado congelado */
+thead th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
     background-color: var(--azul-primario);
     color: white;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }
 
 th, td {
