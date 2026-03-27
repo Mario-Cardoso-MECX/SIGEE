@@ -7,6 +7,8 @@
     <script src="js/auth-guard.js"></script>
     <link rel="stylesheet" href="css/reset.css">
     <link rel="stylesheet" href="css/main.css"> <link rel="stylesheet" href="css/materiales.css">
+    
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 
 <body>
@@ -63,11 +65,15 @@
                 </form>
             </div>
 
-            <div class="search-container">
-                <div class="input-wrapper">
+            <div class="search-container" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                <div class="input-wrapper" style="flex: 1; min-width: 250px;">
                     <i class="fas fa-search search-icon"></i>
-                    <input type="text" id="txtBuscarInv" class="input-grande" placeholder="Buscar Material / Libro...">
+                    <input type="text" id="txtBuscarInv" class="input-grande" placeholder="Buscar Material / Libro..." autocomplete="off">
                 </div>
+                
+                <button id="btnExportarExcelMat" class="btn-verde" style="width: auto; margin: 0; background-color: #27ae60; border-bottom: 3px solid #1e8449;" onclick="exportarTablaExcel('tablaInventario', 'Reporte_Inventario')">
+                    <i class="fas fa-file-excel"></i> Descargar Excel
+                </button>
             </div>
 
             <div class="filter-chips">
@@ -78,7 +84,7 @@
             </div>
 
             <div class="tabla-container">
-                <table class="tabla-compacta">
+                <table class="tabla-compacta" id="tablaInventario">
                     <thead>
                         <tr>
                             <th>ID</th>
