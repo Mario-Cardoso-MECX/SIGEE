@@ -10,10 +10,8 @@ namespace GestorInventarioPrimaria.Controllers
     public class UsuariosController : ControllerBase
     {
         private readonly AppDbContext _context;
-        // NUEVO: Necesario para saber dónde guardar físicamente las fotos
         private readonly IWebHostEnvironment _env;
 
-        // NUEVO: Se agregó IWebHostEnvironment al constructor
         public UsuariosController(AppDbContext context, IWebHostEnvironment env)
         {
             _context = context;
@@ -78,7 +76,6 @@ namespace GestorInventarioPrimaria.Controllers
             return Ok(new { mensaje = "✅ Alumno registrado con éxito", matricula = nuevoAlumno.Matricula });
         }
 
-        // --- NUEVO: ENDPOINT PARA SUBIR LA FOTO DE CREDENCIAL ---
         [HttpPost("subir-foto/{matricula}")]
         public async Task<IActionResult> SubirFotoAlumno(string matricula, IFormFile foto)
         {
@@ -88,37 +85,38 @@ namespace GestorInventarioPrimaria.Controllers
             var alumno = await _context.Usuarios.FirstOrDefaultAsync(u => u.Matricula == matricula);
             if (alumno == null) return NotFound(new { mensaje = "Alumno no encontrado." });
 
-            // 1. Validar que sea una imagen
             var ext = Path.GetExtension(foto.FileName).ToLowerInvariant();
             if (ext != ".jpg" && ext != ".jpeg" && ext != ".png")
                 return BadRequest(new { mensaje = "Solo se permiten imágenes JPG o PNG." });
 
-            // 2. Determinar la carpeta base (front en dev, wwwroot en prod)
             string carpetaBase = _env.WebRootPath ?? Path.Combine(_env.ContentRootPath, "front");
             string carpetaDestino = Path.Combine(carpetaBase, "fotos_alumnos");
 
-            // Si no existe la carpeta "fotos_alumnos", se crea automáticamente
             if (!Directory.Exists(carpetaDestino))
                 Directory.CreateDirectory(carpetaDestino);
 
-            // 3. Crear el nombre del archivo usando la matrícula (ej. 2026-001.jpg)
+            // --- MEJORA: Buscar y eliminar fotos viejas de esta misma matrícula ---
+            var archivosExistentes = Directory.GetFiles(carpetaDestino, $"{matricula}.*");
+            foreach (var archivoViejo in archivosExistentes)
+            {
+                System.IO.File.Delete(archivoViejo);
+            }
+            // ----------------------------------------------------------------------
+
             string nombreArchivo = $"{matricula}{ext}";
             string rutaCompleta = Path.Combine(carpetaDestino, nombreArchivo);
 
-            // 4. Guardar físicamente la imagen
             using (var stream = new FileStream(rutaCompleta, FileMode.Create))
             {
                 await foto.CopyToAsync(stream);
             }
 
-            // 5. Guardar la ruta relativa en la Base de Datos
             alumno.FotoUrl = $"/fotos_alumnos/{nombreArchivo}";
             await _context.SaveChangesAsync();
 
             return Ok(new { mensaje = "Foto subida y guardada correctamente.", fotoUrl = alumno.FotoUrl });
         }
-        // --------------------------------------------------------
-
+        
         [HttpPut("editar-alumno/{id:int}")]
         public async Task<IActionResult> EditarAlumno(int id, [FromBody] Usuario datosActualizados)
         {
@@ -291,6 +289,60 @@ namespace GestorInventarioPrimaria.Controllers
 
             string warning = conDeuda > 0 ? $" ⚠️ IMPORTANTE: {conDeuda} alumnos se mantuvieron en el sistema porque aún deben material." : "";
             return Ok(new { mensaje = $"Limpieza completada. Se eliminaron {borrados} egresados sin deudas." + warning });
+        }
+
+        // --- NUEVO: FUNCIÓN PARA SINCRONIZACIÓN MASIVA DE FOTOS ---
+        [HttpPost("sincronizar-fotos")]
+        public async Task<IActionResult> SincronizarFotos()
+        {
+            // 1. Ubicar la carpeta
+            string carpetaBase = _env.WebRootPath ?? Path.Combine(_env.ContentRootPath, "front");
+            string carpetaDestino = Path.Combine(carpetaBase, "fotos_alumnos");
+
+            if (!Directory.Exists(carpetaDestino))
+                return BadRequest(new { mensaje = "No existe la carpeta fotos_alumnos. Sube al menos una foto manualmente primero." });
+
+            // 2. Leer todas las fotos que haya ahí adentro
+            var archivos = Directory.GetFiles(carpetaDestino);
+            int vinculadas = 0;
+            int ignoradas = 0;
+
+            foreach (var rutaFisica in archivos)
+            {
+                // Extraer el nombre del archivo sin la ruta completa (Ej: "2026-001.jpg")
+                string nombreConExt = Path.GetFileName(rutaFisica);
+                // Extraer solo la matrícula (Ej: "2026-001")
+                string matriculaExtraida = Path.GetFileNameWithoutExtension(rutaFisica);
+
+                // 3. Buscar al alumno en la BD
+                var alumno = await _context.Usuarios.FirstOrDefaultAsync(u => u.Matricula == matriculaExtraida);
+
+                if (alumno != null)
+                {
+                    // Si lo encuentra y la ruta es diferente, se la actualiza
+                    string nuevaRuta = $"/fotos_alumnos/{nombreConExt}";
+                    if (alumno.FotoUrl != nuevaRuta)
+                    {
+                        alumno.FotoUrl = nuevaRuta;
+                        vinculadas++;
+                    }
+                }
+                else
+                {
+                    ignoradas++; // Hay una foto de alguien que ya no está en la BD
+                }
+            }
+
+            if (vinculadas > 0)
+            {
+                await _context.SaveChangesAsync();
+            }
+
+            return Ok(new { 
+                mensaje = "Sincronización terminada con éxito.", 
+                vinculadas = vinculadas, 
+                ignoradas = ignoradas 
+            });
         }
     }
 }

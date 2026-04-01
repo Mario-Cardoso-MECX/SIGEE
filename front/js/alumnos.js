@@ -19,6 +19,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 formRegistro.style.display = 'none'; 
             }
         }
+        
+        // También ocultamos el botón de sincronizar si no son admin/secretaria
+        const btnSincro = document.getElementById('btnSincronizarFotos');
+        if(btnSincro) btnSincro.style.display = 'none';
     }
 
     // NUEVO: El botón de promoción SOLO lo debe ver el Admin (Directora)
@@ -79,7 +83,7 @@ async function cargarAlumnos() {
             // Usamos las clases definidas en el CSS
             const btnHistorial = `<button onclick="verHistorialAlumno(${a.id}, '${nombreCompleto.replace(/'/g, "\\'")}')" class="btn-historial" title="Ver Historial"><i class="fa-solid fa-eye"></i></button>`;
             
-            // --- NUEVO: Botones para Foto y Credencial ---
+            // --- Botones para Foto y Credencial ---
             const btnFoto = `<button onclick="abrirSubirFoto('${a.matricula}')" style="background-color: #3498db !important; padding: 8px 12px !important; border-radius: 6px !important; border: none; color: white; cursor: pointer;" title="Subir Foto"><i class="fas fa-camera"></i></button>`;
             const btnCredencial = `<button onclick="mostrarCredencial('${nombreCompleto.replace(/'/g, "\\'")}', '${a.matricula}', '${a.grupo}', '${a.fotoUrl || ""}')" style="background-color: #27ae60 !important; padding: 8px 12px !important; border-radius: 6px !important; border: none; color: white; cursor: pointer;" title="Generar Credencial"><i class="fas fa-id-badge"></i></button>`;
             
@@ -116,7 +120,7 @@ async function cargarAlumnos() {
 
         tabla.innerHTML = htmlFilas;
 
-        // NUEVO: Reaplicar filtros después de cargar (para el filtro de grado)
+        // Reaplicar filtros después de cargar (para el filtro de grado)
         aplicarFiltrosAlumnos();
         
         const inputBuscar = document.getElementById('txtFiltrarAlumnos');
@@ -271,7 +275,7 @@ function prepararEdicionAlumno(id, nombre, apellidos, grupoCompleto) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// --- NUEVO: DESCARGA EXCEL INTELIGENTE ---
+// DESCARGA EXCEL INTELIGENTE
 async function preguntarExportacionExcel() {
     const termGrado = document.getElementById('selFiltroGrado').value;
     const termLetra = document.getElementById('selFiltroLetra').value;
@@ -308,7 +312,7 @@ async function preguntarExportacionExcel() {
     }
 }
 
-// --- MODIFICADO: BUSCADOR CON FILTRO DOBLE (GRADO Y LETRA) ---
+// BUSCADOR CON FILTRO DOBLE
 let tiempoEsperaBuscadorAlumnos;
 const inputBuscadorAlumnos = document.getElementById('txtFiltrarAlumnos');
 const selectFiltroGrado = document.getElementById('selFiltroGrado');
@@ -350,7 +354,6 @@ function aplicarFiltrosAlumnos() {
         }
     });
 
-    // Se mantiene el candado para no hacer saltos bruscos
     if(termText === '' && termGrado === '' && termLetra === ''){
         restaurarAmbosScrolls(termText);
     }
@@ -508,7 +511,7 @@ async function verHistorialAlumno(id, nombre) {
     }
 }
 
-// --- NUEVO: FUNCIONES PARA FOTO Y CREDENCIAL ---
+// --- FUNCIONES PARA FOTO Y CREDENCIAL ---
 
 function abrirSubirFoto(matricula) {
     document.getElementById('matriculaTemporalFoto').value = matricula;
@@ -542,7 +545,7 @@ async function procesarSubidaFoto(input) {
                 timer: 1500,
                 showConfirmButton: false
             });
-            cargarAlumnos(); // Refresca para que el botón de credencial tenga la nueva URL
+            cargarAlumnos(); 
         } else {
             Swal.fire('Error', data.mensaje || 'Hubo un problema al subir la foto.', 'error');
         }
@@ -550,7 +553,7 @@ async function procesarSubidaFoto(input) {
         console.error(error);
         Swal.fire('Error', 'No se pudo conectar con el servidor.', 'error');
     } finally {
-        input.value = ""; // Limpiar input para permitir subir otra foto igual
+        input.value = ""; 
     }
 }
 
@@ -562,11 +565,9 @@ function mostrarCredencial(nombre, matricula, grupo, fotoUrl) {
     const imgFoto = document.getElementById('credFoto');
     
     if (fotoUrl && fotoUrl !== 'null' && fotoUrl !== '') {
-        // Sacamos el origen de la API (ej: http://localhost:xxxx)
         const baseUrl = API_URL.endsWith('/api') ? API_URL.replace('/api', '') : API_URL.substring(0, API_URL.indexOf('/api'));
         imgFoto.src = baseUrl + fotoUrl;
     } else {
-        // Avatar por defecto si no tiene foto
         imgFoto.src = 'https://ui-avatars.com/api/?name=' + nombre.replace(/ /g, '+') + '&background=cbd5e1&color=475569&size=150';
     }
 
@@ -644,4 +645,50 @@ function imprimirCredencial() {
         </html>
     `);
     ventanaPrint.document.close();
+}
+
+// --- NUEVO: SINCRONIZACIÓN MASIVA DE FOTOS ---
+async function sincronizarFotosMasivas() {
+    const confirmacion = await Swal.fire({
+        title: '¿Sincronizar Fotos Masivamente?',
+        text: 'El sistema escaneará la carpeta "fotos_alumnos" y vinculará cada imagen con el alumno que tenga esa matrícula.',
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonColor: '#3498db',
+        cancelButtonColor: '#94a3b8',
+        confirmButtonText: '<i class="fas fa-sync-alt"></i> Iniciar Sincronización',
+        cancelButtonText: 'Cancelar'
+    });
+
+    if (confirmacion.isConfirmed) {
+        Swal.fire({
+            title: 'Sincronizando...',
+            text: 'Buscando fotos y vinculando matrículas, no cierres esta ventana.',
+            allowOutsideClick: false,
+            didOpen: () => { Swal.showLoading() }
+        });
+
+        try {
+            const response = await fetch(`${API_URL}/Usuarios/sincronizar-fotos`, {
+                method: 'POST'
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                Swal.fire({
+                    title: '¡Sincronización Completa!',
+                    html: `<b>${data.vinculadas}</b> fotos vinculadas con éxito.<br><b>${data.ignoradas}</b> fotos ignoradas (no hay alumnos con esa matrícula).`,
+                    icon: 'success',
+                    confirmButtonColor: '#27ae60'
+                });
+                cargarAlumnos(); // Refresca la tabla para asegurar que los enlaces funcionen
+            } else {
+                Swal.fire('Atención', data.mensaje || 'Hubo un problema al sincronizar.', 'warning');
+            }
+        } catch (error) {
+            console.error(error);
+            Swal.fire('Error', 'No se pudo conectar con el servidor para sincronizar las fotos.', 'error');
+        }
+    }
 }
