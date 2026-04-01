@@ -40,13 +40,13 @@ namespace GestorInventarioPrimaria.Controllers
         public async Task<IActionResult> CrearAlumno([FromBody] Usuario nuevoAlumno)
         {
             if (string.IsNullOrWhiteSpace(nuevoAlumno.Apellidos))
-                return BadRequest("❌ Los apellidos son obligatorios.");
+                return BadRequest(new { mensaje = "❌ Los apellidos son obligatorios." });
 
             bool existe = await _context.Usuarios
                 .AnyAsync(u => u.Nombre.ToLower() == nuevoAlumno.Nombre.ToLower()
                           && u.Apellidos.ToLower() == nuevoAlumno.Apellidos.ToLower());
 
-            if (existe) return BadRequest("❌ Ya existe un alumno con ese nombre y apellidos.");
+            if (existe) return BadRequest(new { mensaje = "❌ Ya existe un alumno con ese nombre y apellidos." });
 
             string anioActual = DateTime.Now.Year.ToString();
             var ultimoUsuario = await _context.Usuarios
@@ -74,12 +74,11 @@ namespace GestorInventarioPrimaria.Controllers
             return Ok(new { mensaje = "✅ Alumno registrado con éxito", matricula = nuevoAlumno.Matricula });
         }
 
-        // --- CORRECCIÓN: Le agregamos :int ---
         [HttpPut("editar-alumno/{id:int}")]
         public async Task<IActionResult> EditarAlumno(int id, [FromBody] Usuario datosActualizados)
         {
             var alumnoDb = await _context.Usuarios.FindAsync(id);
-            if (alumnoDb == null || alumnoDb.Rol != "Alumno") return NotFound("El alumno no existe.");
+            if (alumnoDb == null || alumnoDb.Rol != "Alumno") return NotFound(new { mensaje = "El alumno no existe." });
 
             alumnoDb.Nombre = datosActualizados.Nombre;
             alumnoDb.Apellidos = datosActualizados.Apellidos;
@@ -89,19 +88,25 @@ namespace GestorInventarioPrimaria.Controllers
             return Ok(new { mensaje = "Datos del alumno actualizados correctamente." });
         }
 
-        // --- CORRECCIÓN: Le agregamos :int ---
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> DeleteUsuario(int id)
         {
             var usuario = await _context.Usuarios.FindAsync(id);
-            if (usuario == null) return NotFound("El alumno no existe.");
+            if (usuario == null) return NotFound(new { mensaje = "El alumno no existe." });
 
             var tienePrestamosPendientes = await _context.Reservas.AnyAsync(r => r.UsuarioId == id && r.Estatus == "Activo");
-            if (tienePrestamosPendientes) return BadRequest("No se puede eliminar al alumno porque tiene préstamos activos pendientes.");
+            if (tienePrestamosPendientes) return BadRequest(new { mensaje = "No se puede eliminar al alumno porque tiene préstamos activos pendientes." });
+
+            // SOLUCIÓN BUG BD: Borrar el historial devuelto para que SQL no bloquee la eliminación
+            var historialAnterior = await _context.Reservas.Where(r => r.UsuarioId == id).ToListAsync();
+            if (historialAnterior.Any())
+            {
+                _context.Reservas.RemoveRange(historialAnterior);
+            }
 
             _context.Usuarios.Remove(usuario);
             await _context.SaveChangesAsync();
-            return Ok("Alumno eliminado correctamente.");
+            return Ok(new { mensaje = "Alumno eliminado correctamente." });
         }
 
         [HttpGet("personal")]
@@ -117,11 +122,11 @@ namespace GestorInventarioPrimaria.Controllers
                 string.IsNullOrWhiteSpace(nuevoPersonal.Username) || string.IsNullOrWhiteSpace(nuevoPersonal.PasswordHash) ||
                 string.IsNullOrWhiteSpace(nuevoPersonal.Rol))
             {
-                return BadRequest("❌ Todos los campos son obligatorios.");
+                return BadRequest(new { mensaje = "❌ Todos los campos son obligatorios." });
             }
 
             bool usernameExiste = await _context.Usuarios.AnyAsync(u => u.Username.ToLower() == nuevoPersonal.Username.ToLower());
-            if (usernameExiste) return BadRequest("❌ El nombre de usuario ya está en uso.");
+            if (usernameExiste) return BadRequest(new { mensaje = "❌ El nombre de usuario ya está en uso." });
 
             string anioActual = DateTime.Now.Year.ToString();
             var ultimoPersonal = await _context.Usuarios.Where(u => u.Matricula.StartsWith("PER-" + anioActual)).OrderByDescending(u => u.Id).FirstOrDefaultAsync();
@@ -141,21 +146,19 @@ namespace GestorInventarioPrimaria.Controllers
             return Ok(new { mensaje = "Usuario registrado con éxito", matricula = nuevoPersonal.Matricula });
         }
 
-        // --- CORRECCIÓN: Le agregamos :int ---
         [HttpGet("{id:int}")]
         public async Task<ActionResult<Usuario>> GetUsuario(int id)
         {
             var usuario = await _context.Usuarios.FindAsync(id);
-            if (usuario == null) return NotFound("Usuario no encontrado.");
+            if (usuario == null) return NotFound(new { mensaje = "Usuario no encontrado." });
             return usuario;
         }
 
-        // --- CORRECCIÓN: Le agregamos :int ---
         [HttpPut("editar-personal/{id:int}")]
         public async Task<IActionResult> EditarPersonal(int id, [FromBody] Usuario datosActualizados)
         {
             var usuarioDb = await _context.Usuarios.FindAsync(id);
-            if (usuarioDb == null) return NotFound("El usuario no existe.");
+            if (usuarioDb == null) return NotFound(new { mensaje = "El usuario no existe." });
 
             usuarioDb.Nombre = datosActualizados.Nombre;
             usuarioDb.Apellidos = datosActualizados.Apellidos;
@@ -168,7 +171,6 @@ namespace GestorInventarioPrimaria.Controllers
             return Ok(new { mensaje = "✅ Datos actualizados correctamente." });
         }
 
-        // --- CORRECCIÓN: Le agregamos :int ---
         [HttpDelete("eliminar-personal/{id:int}")]
         public async Task<IActionResult> EliminarPersonal(int id)
         {
@@ -190,7 +192,7 @@ namespace GestorInventarioPrimaria.Controllers
             foreach (var alumno in alumnos)
             {
                 if (string.IsNullOrWhiteSpace(alumno.Grupo)) continue;
-                string[] partes = alumno.Grupo.Split(' ');
+                string[] partes = alumno.Grupo.Trim().Split(' ');
                 
                 if (partes.Length >= 2)
                 {
@@ -210,26 +212,36 @@ namespace GestorInventarioPrimaria.Controllers
             return Ok(new { mensaje = $"¡Cierre exitoso! {promovidos} alumnos subieron de grado y {egresados} niños se marcaron como Egresados." });
         }
 
-        // --- NUEVO: LIMPIEZA MASIVA DE EGRESADOS (RESPETANDO DEUDORES) ---
+        // --- SOLUCIÓN AL BUG: LIMPIEZA MASIVA DE EGRESADOS ---
         [HttpDelete("eliminar-egresados")]
         public async Task<IActionResult> EliminarEgresadosMasivo()
         {
-            var egresados = await _context.Usuarios.Where(u => u.Rol == "Alumno" && u.Grupo == "Egresado").ToListAsync();
+            // Buscamos conteniendo la palabra por si hay espacios ocultos
+            var egresados = await _context.Usuarios
+                .Where(u => u.Rol == "Alumno" && u.Grupo != null && u.Grupo.Contains("Egresado"))
+                .ToListAsync();
             
             if (egresados.Count == 0) 
-                return BadRequest(new { mensaje = "No hay alumnos egresados en el sistema." });
+                return BadRequest(new { mensaje = "No hay alumnos egresados en el sistema o ya fueron limpiados." });
 
             int borrados = 0;
             int conDeuda = 0;
 
             foreach (var eg in egresados)
             {
-                // Verificamos si debe material
+                // Verificamos si debe material activo
                 var debeMaterial = await _context.Reservas.AnyAsync(r => r.UsuarioId == eg.Id && r.Estatus == "Activo");
                 
                 if (debeMaterial) {
                     conDeuda++; 
                 } else {
+                    // EL SECRETO: Borramos sus préstamos devueltos antes de borrar al alumno
+                    var historialAnterior = await _context.Reservas.Where(r => r.UsuarioId == eg.Id).ToListAsync();
+                    if (historialAnterior.Any())
+                    {
+                        _context.Reservas.RemoveRange(historialAnterior);
+                    }
+
                     _context.Usuarios.Remove(eg);
                     borrados++;
                 }
@@ -237,8 +249,8 @@ namespace GestorInventarioPrimaria.Controllers
 
             await _context.SaveChangesAsync();
 
-            string warning = conDeuda > 0 ? $" ⚠️ IMPORTANTE: {conDeuda} alumnos no se borraron porque aún deben material." : "";
-            return Ok(new { mensaje = $"Limpieza completada. Se eliminaron {borrados} egresados del sistema." + warning });
+            string warning = conDeuda > 0 ? $" ⚠️ IMPORTANTE: {conDeuda} alumnos se mantuvieron en el sistema porque aún deben material." : "";
+            return Ok(new { mensaje = $"Limpieza completada. Se eliminaron {borrados} egresados sin deudas." + warning });
         }
     }
 }
