@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="css/main.css">
     
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
 </head>
 <body>
     <div class="dashboard-wrapper">
@@ -111,6 +112,10 @@
                         <i class="fa-solid fa-broom"></i> Limpiar Egresados
                     </button>
 
+                    <button id="btnImprimirCredenciales" style="background-color: #8e44ad; color: white; border: none; padding: 12px 20px; border-radius: 25px; font-weight: bold; cursor: pointer; transition: 0.3s; box-shadow: 0 4px 6px rgba(0,0,0,0.1);" onclick="imprimirCredencialesFiltradas()">
+                        <i class="fas fa-id-card-clip"></i> Imprimir Credenciales
+                    </button>
+
                     <button id="btnSincronizarFotos" style="background-color: #3498db; color: white; border: none; padding: 12px 20px; border-radius: 25px; font-weight: bold; cursor: pointer; transition: 0.3s; box-shadow: 0 4px 6px rgba(0,0,0,0.1);" onclick="sincronizarFotosMasivas()">
                         <i class="fas fa-sync-alt"></i> Sincronizar Fotos
                     </button>
@@ -165,8 +170,7 @@
                 <p style="margin: 2px 0 15px 0; color: #475569; font-weight: bold; font-size: 0.95rem;">GRUPO: <span id="credGrupo" style="color: #27ae60;">---</span></p>
                 
                 <div style="margin-top: 15px; padding-top: 15px; border-top: 2px dashed #cbd5e1;">
-                    <i class="fas fa-barcode" style="font-size: 3rem; color: #334155;"></i>
-                    <i class="fas fa-barcode" style="font-size: 3rem; color: #334155;"></i>
+                    <svg id="credBarcode" style="max-width: 100%; height: auto;"></svg>
                 </div>
             </div>
 

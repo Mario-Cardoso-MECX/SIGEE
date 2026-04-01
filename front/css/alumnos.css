@@ -75,13 +75,19 @@
     outline: none;
 }
 
-.btn-verde {
+/* SOLUCIÓN: Botón verde grande SOLO para el formulario */
+#formNuevoAlumno .btn-verde {
     width: calc(100% - 50px);
     margin: 0 25px 25px 25px;
+    padding: 15px;
+}
+
+/* SOLUCIÓN: Botón verde general de tamaño normal (como el de Excel) */
+.btn-verde {
     background-color: var(--verde-alegre);
     color: white;
     border: none;
-    padding: 15px;
+    padding: 10px 20px;
     border-radius: 8px;
     font-size: 1rem;
     font-weight: bold;
@@ -132,6 +138,12 @@ table {
     table-layout: fixed;
 }
 
+/* SOLUCIÓN: Repartir el ancho para que quepan los 5 botones sin aplastarse */
+th:nth-child(1) { width: 15%; } /* Matrícula */
+th:nth-child(2) { width: 35%; } /* Nombre Completo */
+th:nth-child(3) { width: 15%; } /* Grupo */
+th:nth-child(4) { width: 35%; } /* Acciones (Mucho espacio) */
+
 thead th {
     position: sticky;
     top: 0;
@@ -151,6 +163,12 @@ td {
     white-space: nowrap;        
     overflow: hidden;           
     text-overflow: ellipsis;   
+}
+
+/* SOLUCIÓN: Evitar que los botones de la última columna se corten o desaparezcan */
+td:last-child {
+    white-space: normal;
+    overflow: visible;
 }
 
 tbody tr:nth-child(even) {
@@ -173,27 +191,28 @@ tbody tr:hover {
     justify-content: center;
     gap: 8px;
     align-items: center;
+    flex-wrap: wrap; /* Si la pantalla es pequeña, se acomodan en 2 líneas */
 }
 
 /* Ajuste general para botones dentro de celdas */
 td button {
-    width: auto !important; /* Evita que se estiren al 100% */
+    width: auto !important; 
     padding: 8px 12px !important;
     border-radius: 6px !important;
-    border: none !important; /* Quitamos el borde gris feo */
-    color: white !important; /* Iconos siempre blancos */
+    border: none !important; 
+    color: white !important; 
     cursor: pointer;
     transition: 0.3s;
 }
 
 /* Colores vibrantes */
-.btn-historial { background-color: #3498db !important; } /* Azul */
+.btn-historial { background-color: #3498db !important; } 
 .btn-historial:hover { background-color: #2980b9 !important; }
 
-.btn-editar-naranja { background-color: #f39c12 !important; } /* Naranja */
+.btn-editar-naranja { background-color: #f39c12 !important; } 
 .btn-editar-naranja:hover { background-color: #d68910 !important; }
 
-.btn-borrar-rojo { background-color: #e74c3c !important; } /* Rojo */
+.btn-borrar-rojo { background-color: #e74c3c !important; } 
 .btn-borrar-rojo:hover { background-color: #c0392b !important; }
 
 @media (max-width: 768px) {

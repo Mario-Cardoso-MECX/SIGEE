@@ -17,9 +17,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
-        // Ocultar botón de sincronizar si no son admin/secretaria
+        // Ocultar botón de sincronizar e imprimir masivo si no son admin/secretaria
         const btnSincro = document.getElementById('btnSincronizarFotos');
         if(btnSincro) btnSincro.style.display = 'none';
+
+        const btnImpMasiva = document.getElementById('btnImprimirCredenciales');
+        if(btnImpMasiva) btnImpMasiva.style.display = 'none';
     }
 
     if (rol !== 'Admin') {
@@ -97,8 +100,9 @@ async function cargarAlumnos() {
                 `;
             }
 
+            // MODIFICADO: Agregamos data-attributes para que la función de impresión masiva pueda extraerlos
             htmlFilas += `
-                <tr>
+                <tr data-matricula="${a.matricula}" data-nombre="${nombreCompleto.replace(/"/g, '&quot;')}" data-grupo="${a.grupo || ''}" data-foto="${a.fotoUrl || ''}">
                     <td><strong>${a.matricula}</strong></td>
                     <td>${nombreCompleto}</td>
                     <td>${a.grupo}</td>
@@ -429,6 +433,17 @@ function mostrarCredencial(nombre, matricula, grupo, fotoUrl) {
     } else {
         imgFoto.src = 'https://ui-avatars.com/api/?name=' + nombre.replace(/ /g, '+') + '&background=cbd5e1&color=475569&size=150';
     }
+
+    // MAGIA: Generador del Código de Barras Real en el Modal
+    JsBarcode("#credBarcode", matricula, {
+        format: "CODE128",
+        width: 2,
+        height: 40,
+        displayValue: false, // Ocultamos los números porque ya se ven arriba
+        lineColor: "#334155",
+        background: "transparent"
+    });
+
     document.getElementById('modalCredencial').style.display = 'flex';
 }
 
@@ -452,6 +467,7 @@ function imprimirCredencial() {
                     .nombre { margin: 5px 0; color: #1e293b; font-size: 1.3rem; text-transform: uppercase; }
                     .info { margin: 8px 0 2px 0; color: #475569; font-weight: bold; font-size: 0.95rem; }
                     .barcode-container { margin-top: 15px; padding-top: 15px; border-top: 2px dashed #cbd5e1; }
+                    svg { max-width: 100%; height: auto; }
                 </style>
             </head>
             <body>
@@ -463,7 +479,7 @@ function imprimirCredencial() {
     ventanaPrint.document.close();
 }
 
-// --- NUEVO: SINCRONIZACIÓN MASIVA DE FOTOS ---
+// SINCRONIZACIÓN MASIVA DE FOTOS
 async function sincronizarFotosMasivas() {
     const confirmacion = await Swal.fire({
         title: '¿Sincronizar Fotos Masivamente?',
@@ -507,4 +523,91 @@ async function sincronizarFotosMasivas() {
             Swal.fire('Error', 'No se pudo conectar con el servidor para sincronizar las fotos.', 'error');
         }
     }
+}
+
+// --- NUEVO: IMPRESIÓN POR BLOQUES / FILTRADA ---
+function imprimirCredencialesFiltradas() {
+    const filas = document.querySelectorAll('#tablaAlumnosBody tr');
+    let credencialesHTML = '';
+    let count = 0;
+
+    filas.forEach(fila => {
+        // Solo tomamos en cuenta las filas que están visibles (no ocultas por los filtros)
+        if (fila.style.display !== 'none' && fila.hasAttribute('data-matricula')) {
+            const nombre = fila.getAttribute('data-nombre');
+            const matricula = fila.getAttribute('data-matricula');
+            const grupo = fila.getAttribute('data-grupo');
+            const fotoUrl = fila.getAttribute('data-foto');
+
+            let imgSrc = 'https://ui-avatars.com/api/?name=' + nombre.replace(/ /g, '+') + '&background=cbd5e1&color=475569&size=150';
+            if (fotoUrl && fotoUrl !== 'null' && fotoUrl !== '') {
+                const baseUrl = API_URL.endsWith('/api') ? API_URL.replace('/api', '') : API_URL.substring(0, API_URL.indexOf('/api'));
+                imgSrc = baseUrl + fotoUrl;
+            }
+
+            credencialesHTML += `
+                <div class="credencial-box">
+                    <div class="cabecera">PRIMARIA BENITO JUÁREZ</div>
+                    <img class="foto" src="${imgSrc}" alt="Foto Alumno">
+                    <h4 class="nombre">${nombre}</h4>
+                    <p class="info">MATRÍCULA: <span style="color: #e74c3c;">${matricula}</span></p>
+                    <p class="info">GRUPO: <span style="color: #27ae60;">${grupo || "N/A"}</span></p>
+                    <div class="barcode-container">
+                        <svg class="barcode-svg" data-matricula="${matricula}"></svg>
+                    </div>
+                </div>
+            `;
+            count++;
+        }
+    });
+
+    if (count === 0) {
+        Swal.fire('Atención', 'No hay alumnos visibles en la tabla para imprimir. Ajusta los filtros.', 'info');
+        return;
+    }
+
+    const ventanaPrint = window.open('', '', 'width=800,height=600');
+    ventanaPrint.document.write(`
+        <html>
+            <head>
+                <title>Impresión Masiva de Credenciales</title>
+                <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
+                <style>
+                    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #fff; margin: 0; padding: 20px; display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; }
+                    .credencial-box { border: 2px solid #cbd5e1; border-radius: 12px; padding: 20px; background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%); text-align: center; width: 320px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); position: relative; overflow: hidden; page-break-inside: avoid; }
+                    .cabecera { background: #2c3e50; color: white; padding: 12px; margin: -20px -20px 20px -20px; font-weight: bold; font-size: 1.1rem; letter-spacing: 1px; }
+                    .foto { width: 120px; height: 120px; object-fit: cover; border-radius: 50%; border: 4px solid #3498db; margin-bottom: 15px; background: white; }
+                    .nombre { margin: 5px 0; color: #1e293b; font-size: 1.3rem; text-transform: uppercase; }
+                    .info { margin: 8px 0 2px 0; color: #475569; font-weight: bold; font-size: 0.95rem; }
+                    .barcode-container { margin-top: 15px; padding-top: 15px; border-top: 2px dashed #cbd5e1; }
+                    svg { max-width: 100%; height: auto; }
+                    @media print {
+                        body { padding: 0; display: block; }
+                        .credencial-box { float: left; margin: 10px; box-shadow: none; border: 1px solid #ccc; }
+                    }
+                </style>
+            </head>
+            <body>
+                ${credencialesHTML}
+                <script>
+                    window.onload = function() {
+                        // Dibujar los códigos de barras reales
+                        document.querySelectorAll('.barcode-svg').forEach(function(svg) {
+                            JsBarcode(svg, svg.getAttribute('data-matricula'), {
+                                format: "CODE128",
+                                width: 2,
+                                height: 40,
+                                displayValue: false,
+                                lineColor: "#334155",
+                                background: "transparent"
+                            });
+                        });
+                        // Abrir la ventana de impresión
+                        setTimeout(() => { window.print(); window.close(); }, 800);
+                    };
+                </script>
+            </body>
+        </html>
+    `);
+    ventanaPrint.document.close();
 }
