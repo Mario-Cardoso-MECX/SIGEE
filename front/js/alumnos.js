@@ -434,12 +434,11 @@ function mostrarCredencial(nombre, matricula, grupo, fotoUrl) {
         imgFoto.src = 'https://ui-avatars.com/api/?name=' + nombre.replace(/ /g, '+') + '&background=cbd5e1&color=475569&size=150';
     }
 
-    // MAGIA: Generador del Código de Barras Real en el Modal
     JsBarcode("#credBarcode", matricula, {
         format: "CODE128",
         width: 2,
         height: 40,
-        displayValue: false, // Ocultamos los números porque ya se ven arriba
+        displayValue: false, 
         lineColor: "#334155",
         background: "transparent"
     });
@@ -451,6 +450,7 @@ function cerrarModalCredencial() {
     document.getElementById('modalCredencial').style.display = 'none';
 }
 
+// IMPRESIÓN INDIVIDUAL CON TAMAÑO ESTRICTO
 function imprimirCredencial() {
     const contenido = document.getElementById('credencialContenedor').innerHTML;
     const ventanaPrint = window.open('', '', 'width=800,height=600');
@@ -461,12 +461,15 @@ function imprimirCredencial() {
                 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
                 <style>
                     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #fff; }
-                    .credencial-box { border: 2px solid #cbd5e1; border-radius: 12px; padding: 20px; background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%); text-align: center; width: 320px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); position: relative; overflow: hidden; }
-                    .cabecera { background: #2c3e50; color: white; padding: 12px; margin: -20px -20px 20px -20px; font-weight: bold; font-size: 1.1rem; letter-spacing: 1px; }
-                    .foto { width: 120px; height: 120px; object-fit: cover; border-radius: 50%; border: 4px solid #3498db; margin-bottom: 15px; background: white; }
-                    .nombre { margin: 5px 0; color: #1e293b; font-size: 1.3rem; text-transform: uppercase; }
-                    .info { margin: 8px 0 2px 0; color: #475569; font-weight: bold; font-size: 0.95rem; }
-                    .barcode-container { margin-top: 15px; padding-top: 15px; border-top: 2px dashed #cbd5e1; }
+                    /* REGLA DE TAMAÑO FIJO 480px y FLEXBOX PARA ANCLAR EL CÓDIGO DE BARRAS */
+                    .credencial-box { border: 2px solid #cbd5e1; border-radius: 12px; padding: 20px; background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%); text-align: center; width: 320px; height: 480px; box-sizing: border-box; box-shadow: 0 4px 10px rgba(0,0,0,0.05); position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; margin: 0 auto; }
+                    .cabecera { background: #2c3e50; color: white; padding: 12px; margin: -20px -20px 20px -20px; font-weight: bold; font-size: 1.1rem; letter-spacing: 1px; width: calc(100% + 40px); }
+                    .foto { width: 120px; height: 120px; min-height: 120px; object-fit: cover; border-radius: 50%; border: 4px solid #3498db; margin-bottom: 10px; background: white; }
+                    .nombre-container { height: 3.5rem; display: flex; align-items: center; justify-content: center; width: 100%; overflow: hidden; margin-bottom: 5px; }
+                    .nombre { margin: 0; color: #1e293b; font-size: 1.2rem; text-transform: uppercase; line-height: 1.2; }
+                    .info { margin: 2px 0; color: #475569; font-weight: bold; font-size: 0.95rem; }
+                    /* margin-top: auto empuja esto hasta abajo sin importar el largo del nombre */
+                    .barcode-container { margin-top: auto; padding-top: 15px; border-top: 2px dashed #cbd5e1; width: 100%; }
                     svg { max-width: 100%; height: auto; }
                 </style>
             </head>
@@ -479,60 +482,35 @@ function imprimirCredencial() {
     ventanaPrint.document.close();
 }
 
-// SINCRONIZACIÓN MASIVA DE FOTOS
 async function sincronizarFotosMasivas() {
     const confirmacion = await Swal.fire({
         title: '¿Sincronizar Fotos Masivamente?',
         text: 'El sistema escaneará la carpeta "fotos_alumnos" y vinculará cada imagen con el alumno que tenga esa matrícula.',
         icon: 'info',
-        showCancelButton: true,
-        confirmButtonColor: '#3498db',
-        cancelButtonColor: '#94a3b8',
-        confirmButtonText: '<i class="fas fa-sync-alt"></i> Iniciar Sincronización',
-        cancelButtonText: 'Cancelar'
+        showCancelButton: true, confirmButtonColor: '#3498db', cancelButtonColor: '#94a3b8',
+        confirmButtonText: '<i class="fas fa-sync-alt"></i> Iniciar Sincronización', cancelButtonText: 'Cancelar'
     });
 
     if (confirmacion.isConfirmed) {
-        Swal.fire({
-            title: 'Sincronizando...',
-            text: 'Buscando fotos y vinculando matrículas, no cierres esta ventana.',
-            allowOutsideClick: false,
-            didOpen: () => { Swal.showLoading() }
-        });
-
+        Swal.fire({ title: 'Sincronizando...', text: 'Buscando fotos y vinculando matrículas, no cierres esta ventana.', allowOutsideClick: false, didOpen: () => { Swal.showLoading() } });
         try {
-            const response = await fetch(`${API_URL}/Usuarios/sincronizar-fotos`, {
-                method: 'POST'
-            });
-
+            const response = await fetch(`${API_URL}/Usuarios/sincronizar-fotos`, { method: 'POST' });
             const data = await response.json();
-
             if (response.ok) {
-                Swal.fire({
-                    title: '¡Sincronización Completa!',
-                    html: `<b>${data.vinculadas}</b> fotos vinculadas con éxito.<br><b>${data.ignoradas}</b> fotos ignoradas (no hay alumnos con esa matrícula).`,
-                    icon: 'success',
-                    confirmButtonColor: '#27ae60'
-                });
+                Swal.fire({ title: '¡Sincronización Completa!', html: `<b>${data.vinculadas}</b> fotos vinculadas con éxito.<br><b>${data.ignoradas}</b> fotos ignoradas (no hay alumnos con esa matrícula).`, icon: 'success', confirmButtonColor: '#27ae60' });
                 cargarAlumnos(); 
-            } else {
-                Swal.fire('Atención', data.mensaje || 'Hubo un problema al sincronizar.', 'warning');
-            }
-        } catch (error) {
-            console.error(error);
-            Swal.fire('Error', 'No se pudo conectar con el servidor para sincronizar las fotos.', 'error');
-        }
+            } else { Swal.fire('Atención', data.mensaje || 'Hubo un problema al sincronizar.', 'warning'); }
+        } catch (error) { Swal.fire('Error', 'No se pudo conectar con el servidor para sincronizar las fotos.', 'error'); }
     }
 }
 
-// --- NUEVO: IMPRESIÓN POR BLOQUES / FILTRADA ---
+// IMPRESIÓN POR BLOQUES CON TAMAÑO ESTRICTO
 function imprimirCredencialesFiltradas() {
     const filas = document.querySelectorAll('#tablaAlumnosBody tr');
     let credencialesHTML = '';
     let count = 0;
 
     filas.forEach(fila => {
-        // Solo tomamos en cuenta las filas que están visibles (no ocultas por los filtros)
         if (fila.style.display !== 'none' && fila.hasAttribute('data-matricula')) {
             const nombre = fila.getAttribute('data-nombre');
             const matricula = fila.getAttribute('data-matricula');
@@ -549,7 +527,9 @@ function imprimirCredencialesFiltradas() {
                 <div class="credencial-box">
                     <div class="cabecera">PRIMARIA BENITO JUÁREZ</div>
                     <img class="foto" src="${imgSrc}" alt="Foto Alumno">
-                    <h4 class="nombre">${nombre}</h4>
+                    <div class="nombre-container">
+                        <h4 class="nombre">${nombre}</h4>
+                    </div>
                     <p class="info">MATRÍCULA: <span style="color: #e74c3c;">${matricula}</span></p>
                     <p class="info">GRUPO: <span style="color: #27ae60;">${grupo || "N/A"}</span></p>
                     <div class="barcode-container">
@@ -574,12 +554,15 @@ function imprimirCredencialesFiltradas() {
                 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
                 <style>
                     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #fff; margin: 0; padding: 20px; display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; }
-                    .credencial-box { border: 2px solid #cbd5e1; border-radius: 12px; padding: 20px; background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%); text-align: center; width: 320px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); position: relative; overflow: hidden; page-break-inside: avoid; }
-                    .cabecera { background: #2c3e50; color: white; padding: 12px; margin: -20px -20px 20px -20px; font-weight: bold; font-size: 1.1rem; letter-spacing: 1px; }
-                    .foto { width: 120px; height: 120px; object-fit: cover; border-radius: 50%; border: 4px solid #3498db; margin-bottom: 15px; background: white; }
-                    .nombre { margin: 5px 0; color: #1e293b; font-size: 1.3rem; text-transform: uppercase; }
-                    .info { margin: 8px 0 2px 0; color: #475569; font-weight: bold; font-size: 0.95rem; }
-                    .barcode-container { margin-top: 15px; padding-top: 15px; border-top: 2px dashed #cbd5e1; }
+                    /* REGLA DE TAMAÑO FIJO 480px y FLEXBOX PARA ANCLAR EL CÓDIGO DE BARRAS */
+                    .credencial-box { border: 2px solid #cbd5e1; border-radius: 12px; padding: 20px; background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%); text-align: center; width: 320px; height: 480px; box-sizing: border-box; box-shadow: 0 4px 10px rgba(0,0,0,0.05); position: relative; overflow: hidden; page-break-inside: avoid; display: flex; flex-direction: column; align-items: center; }
+                    .cabecera { background: #2c3e50; color: white; padding: 12px; margin: -20px -20px 20px -20px; font-weight: bold; font-size: 1.1rem; letter-spacing: 1px; width: calc(100% + 40px); }
+                    .foto { width: 120px; height: 120px; min-height: 120px; object-fit: cover; border-radius: 50%; border: 4px solid #3498db; margin-bottom: 10px; background: white; }
+                    .nombre-container { height: 3.5rem; display: flex; align-items: center; justify-content: center; width: 100%; overflow: hidden; margin-bottom: 5px; }
+                    .nombre { margin: 0; color: #1e293b; font-size: 1.2rem; text-transform: uppercase; line-height: 1.2; }
+                    .info { margin: 2px 0; color: #475569; font-weight: bold; font-size: 0.95rem; }
+                    /* margin-top: auto empuja el código de barras siempre hasta abajo */
+                    .barcode-container { margin-top: auto; padding-top: 15px; border-top: 2px dashed #cbd5e1; width: 100%; }
                     svg { max-width: 100%; height: auto; }
                     @media print {
                         body { padding: 0; display: block; }
@@ -591,18 +574,11 @@ function imprimirCredencialesFiltradas() {
                 ${credencialesHTML}
                 <script>
                     window.onload = function() {
-                        // Dibujar los códigos de barras reales
                         document.querySelectorAll('.barcode-svg').forEach(function(svg) {
                             JsBarcode(svg, svg.getAttribute('data-matricula'), {
-                                format: "CODE128",
-                                width: 2,
-                                height: 40,
-                                displayValue: false,
-                                lineColor: "#334155",
-                                background: "transparent"
+                                format: "CODE128", width: 2, height: 40, displayValue: false, lineColor: "#334155", background: "transparent"
                             });
                         });
-                        // Abrir la ventana de impresión
                         setTimeout(() => { window.print(); window.close(); }, 800);
                     };
                 </script>
