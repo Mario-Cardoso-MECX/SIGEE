@@ -79,12 +79,18 @@ async function cargarAlumnos() {
             // Usamos las clases definidas en el CSS
             const btnHistorial = `<button onclick="verHistorialAlumno(${a.id}, '${nombreCompleto.replace(/'/g, "\\'")}')" class="btn-historial" title="Ver Historial"><i class="fa-solid fa-eye"></i></button>`;
             
+            // --- NUEVO: Botones para Foto y Credencial ---
+            const btnFoto = `<button onclick="abrirSubirFoto('${a.matricula}')" style="background-color: #3498db !important; padding: 8px 12px !important; border-radius: 6px !important; border: none; color: white; cursor: pointer;" title="Subir Foto"><i class="fas fa-camera"></i></button>`;
+            const btnCredencial = `<button onclick="mostrarCredencial('${nombreCompleto.replace(/'/g, "\\'")}', '${a.matricula}', '${a.grupo}', '${a.fotoUrl || ""}')" style="background-color: #27ae60 !important; padding: 8px 12px !important; border-radius: 6px !important; border: none; color: white; cursor: pointer;" title="Generar Credencial"><i class="fas fa-id-badge"></i></button>`;
+            
             let acciones = "";
             
             if (puedeEditar) {
                 acciones = `
                     <div class="acciones-flex">
                         ${btnHistorial}
+                        ${btnFoto}
+                        ${btnCredencial}
                         <button onclick="prepararEdicionAlumno(${a.id}, '${nombre.replace(/'/g, "\\'")}', '${apellidos.replace(/'/g, "\\'")}', '${a.grupo}')" class="btn-editar-naranja" title="Editar"><i class="fa-solid fa-pen-to-square"></i></button>
                         <button onclick="eliminarAlumno(${a.id})" class="btn-borrar-rojo" title="Eliminar"><i class="fa-solid fa-trash"></i></button>
                     </div>
@@ -404,7 +410,7 @@ async function promoverCicloEscolar() {
     }
 }
 
-// --- NUEVO: LIMPIEZA MASIVA DE EGRESADOS ---
+// LIMPIEZA MASIVA DE EGRESADOS
 async function eliminarEgresadosMasivo() {
     const confirmacion = await Swal.fire({
         title: '¿Limpiar Egresados?',
@@ -435,7 +441,7 @@ async function eliminarEgresadosMasivo() {
     }
 }
 
-// --- NUEVO: MOSTRAR HISTORIAL DE LECTURA POR ALUMNO ---
+// MOSTRAR HISTORIAL DE LECTURA POR ALUMNO
 async function verHistorialAlumno(id, nombre) {
     Swal.fire({
         title: `Cargando historial de ${nombre}...`,
@@ -459,7 +465,6 @@ async function verHistorialAlumno(id, nombre) {
             return;
         }
 
-        // Construimos la tablita para el Pop-Up
         let filasTabla = '';
         datos.forEach(d => {
             let colorEstado = d.estado === 'Activo' ? '#f39c12' : '#27ae60'; 
@@ -472,7 +477,6 @@ async function verHistorialAlumno(id, nombre) {
             `;
         });
 
-        // Ajuste: quitamos el table-layout: fixed solo para esta tabla del modal
         const tablaHTML = `
             <div style="max-height: 350px; overflow-y: auto; border: 1px solid #ddd; border-radius: 8px;">
                 <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem; table-layout: auto !important;">
@@ -502,4 +506,142 @@ async function verHistorialAlumno(id, nombre) {
         console.error(error);
         Swal.fire('Error', 'No se pudo cargar el historial del alumno.', 'error');
     }
+}
+
+// --- NUEVO: FUNCIONES PARA FOTO Y CREDENCIAL ---
+
+function abrirSubirFoto(matricula) {
+    document.getElementById('matriculaTemporalFoto').value = matricula;
+    document.getElementById('inputFotoAlumno').click();
+}
+
+async function procesarSubidaFoto(input) {
+    if (!input.files || input.files.length === 0) return;
+    
+    const file = input.files[0];
+    const matricula = document.getElementById('matriculaTemporalFoto').value;
+    
+    const formData = new FormData();
+    formData.append('foto', file);
+
+    Swal.fire({ title: 'Subiendo foto...', didOpen: () => { Swal.showLoading() } });
+
+    try {
+        const response = await fetch(`${API_URL}/Usuarios/subir-foto/${matricula}`, {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            Swal.fire({
+                title: '¡Éxito!',
+                text: 'Foto subida correctamente.',
+                icon: 'success',
+                timer: 1500,
+                showConfirmButton: false
+            });
+            cargarAlumnos(); // Refresca para que el botón de credencial tenga la nueva URL
+        } else {
+            Swal.fire('Error', data.mensaje || 'Hubo un problema al subir la foto.', 'error');
+        }
+    } catch (error) {
+        console.error(error);
+        Swal.fire('Error', 'No se pudo conectar con el servidor.', 'error');
+    } finally {
+        input.value = ""; // Limpiar input para permitir subir otra foto igual
+    }
+}
+
+function mostrarCredencial(nombre, matricula, grupo, fotoUrl) {
+    document.getElementById('credNombre').innerText = nombre;
+    document.getElementById('credMatricula').innerText = matricula;
+    document.getElementById('credGrupo').innerText = grupo || "N/A";
+    
+    const imgFoto = document.getElementById('credFoto');
+    
+    if (fotoUrl && fotoUrl !== 'null' && fotoUrl !== '') {
+        // Sacamos el origen de la API (ej: http://localhost:xxxx)
+        const baseUrl = API_URL.endsWith('/api') ? API_URL.replace('/api', '') : API_URL.substring(0, API_URL.indexOf('/api'));
+        imgFoto.src = baseUrl + fotoUrl;
+    } else {
+        // Avatar por defecto si no tiene foto
+        imgFoto.src = 'https://ui-avatars.com/api/?name=' + nombre.replace(/ /g, '+') + '&background=cbd5e1&color=475569&size=150';
+    }
+
+    document.getElementById('modalCredencial').style.display = 'flex';
+}
+
+function cerrarModalCredencial() {
+    document.getElementById('modalCredencial').style.display = 'none';
+}
+
+function imprimirCredencial() {
+    const contenido = document.getElementById('credencialContenedor').innerHTML;
+    const ventanaPrint = window.open('', '', 'width=800,height=600');
+    
+    ventanaPrint.document.write(`
+        <html>
+            <head>
+                <title>Imprimir Credencial</title>
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+                <style>
+                    body { 
+                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+                        display: flex; 
+                        justify-content: center; 
+                        align-items: center; 
+                        height: 100vh; 
+                        margin: 0; 
+                        background: #fff; 
+                    }
+                    .credencial-box { 
+                        border: 2px solid #cbd5e1; 
+                        border-radius: 12px; 
+                        padding: 20px; 
+                        background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%); 
+                        text-align: center; 
+                        width: 320px; 
+                        box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+                        position: relative;
+                        overflow: hidden;
+                    }
+                    .cabecera {
+                        background: #2c3e50; 
+                        color: white; 
+                        padding: 12px; 
+                        margin: -20px -20px 20px -20px; 
+                        font-weight: bold; 
+                        font-size: 1.1rem; 
+                        letter-spacing: 1px;
+                    }
+                    .foto {
+                        width: 120px; 
+                        height: 120px; 
+                        object-fit: cover; 
+                        border-radius: 50%; 
+                        border: 4px solid #3498db; 
+                        margin-bottom: 15px; 
+                        background: white;
+                    }
+                    .nombre { margin: 5px 0; color: #1e293b; font-size: 1.3rem; text-transform: uppercase; }
+                    .info { margin: 8px 0 2px 0; color: #475569; font-weight: bold; font-size: 0.95rem; }
+                    .barcode-container { margin-top: 15px; padding-top: 15px; border-top: 2px dashed #cbd5e1; }
+                </style>
+            </head>
+            <body>
+                <div class="credencial-box">
+                    ${contenido}
+                </div>
+                <script>
+                    setTimeout(() => { 
+                        window.print(); 
+                        window.close(); 
+                    }, 500);
+                </script>
+            </body>
+        </html>
+    `);
+    ventanaPrint.document.close();
 }

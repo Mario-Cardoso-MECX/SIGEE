@@ -1,6 +1,7 @@
 using GestorInventarioPrimaria.Data;
 using Microsoft.EntityFrameworkCore;
-using System.IO; // <-- NECESARIO PARA DETECTAR LA CARPETA
+using Microsoft.Extensions.FileProviders; // <-- NECESARIO PARA LAS RUTAS DE ARCHIVOS
+using System.IO; 
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -50,9 +51,24 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-// --- CONFIGURACIÓN PARA ACCESO A wwwroot EN IIS ---
-app.UseDefaultFiles(); // <-- AGREGA ESTO: Permite cargar el login.html sin escribir rutas raras
-app.UseStaticFiles();  // <-- ESTE YA LO TENÍAS: Es el que da acceso físico a los archivos de wwwroot/front
+// --- CONFIGURACIÓN PARA ARCHIVOS ESTÁTICOS (LAS FOTOS Y EL FRONTEND) ---
+app.UseDefaultFiles(); 
+
+// Si estamos en desarrollo en Visual Studio, la carpeta se llama "front"
+if (Directory.Exists(Path.Combine(builder.Environment.ContentRootPath, "front")))
+{
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new PhysicalFileProvider(
+            Path.Combine(builder.Environment.ContentRootPath, "front")),
+        RequestPath = "" 
+    });
+}
+else
+{
+    // Si estamos en producción (IIS o SmarterASP), la carpeta se llamará "wwwroot"
+    app.UseStaticFiles(); 
+}
 // --------------------------------------------------
 
 app.UseCors("PermitirTodo");

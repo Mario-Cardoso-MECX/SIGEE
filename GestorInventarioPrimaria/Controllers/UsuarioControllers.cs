@@ -10,10 +10,14 @@ namespace GestorInventarioPrimaria.Controllers
     public class UsuariosController : ControllerBase
     {
         private readonly AppDbContext _context;
+        // NUEVO: Necesario para saber dónde guardar físicamente las fotos
+        private readonly IWebHostEnvironment _env;
 
-        public UsuariosController(AppDbContext context)
+        // NUEVO: Se agregó IWebHostEnvironment al constructor
+        public UsuariosController(AppDbContext context, IWebHostEnvironment env)
         {
             _context = context;
+            _env = env;
         }
 
         [HttpGet("alumnos")]
@@ -74,6 +78,47 @@ namespace GestorInventarioPrimaria.Controllers
             return Ok(new { mensaje = "✅ Alumno registrado con éxito", matricula = nuevoAlumno.Matricula });
         }
 
+        // --- NUEVO: ENDPOINT PARA SUBIR LA FOTO DE CREDENCIAL ---
+        [HttpPost("subir-foto/{matricula}")]
+        public async Task<IActionResult> SubirFotoAlumno(string matricula, IFormFile foto)
+        {
+            if (foto == null || foto.Length == 0)
+                return BadRequest(new { mensaje = "No se recibió ninguna imagen." });
+
+            var alumno = await _context.Usuarios.FirstOrDefaultAsync(u => u.Matricula == matricula);
+            if (alumno == null) return NotFound(new { mensaje = "Alumno no encontrado." });
+
+            // 1. Validar que sea una imagen
+            var ext = Path.GetExtension(foto.FileName).ToLowerInvariant();
+            if (ext != ".jpg" && ext != ".jpeg" && ext != ".png")
+                return BadRequest(new { mensaje = "Solo se permiten imágenes JPG o PNG." });
+
+            // 2. Determinar la carpeta base (front en dev, wwwroot en prod)
+            string carpetaBase = _env.WebRootPath ?? Path.Combine(_env.ContentRootPath, "front");
+            string carpetaDestino = Path.Combine(carpetaBase, "fotos_alumnos");
+
+            // Si no existe la carpeta "fotos_alumnos", se crea automáticamente
+            if (!Directory.Exists(carpetaDestino))
+                Directory.CreateDirectory(carpetaDestino);
+
+            // 3. Crear el nombre del archivo usando la matrícula (ej. 2026-001.jpg)
+            string nombreArchivo = $"{matricula}{ext}";
+            string rutaCompleta = Path.Combine(carpetaDestino, nombreArchivo);
+
+            // 4. Guardar físicamente la imagen
+            using (var stream = new FileStream(rutaCompleta, FileMode.Create))
+            {
+                await foto.CopyToAsync(stream);
+            }
+
+            // 5. Guardar la ruta relativa en la Base de Datos
+            alumno.FotoUrl = $"/fotos_alumnos/{nombreArchivo}";
+            await _context.SaveChangesAsync();
+
+            return Ok(new { mensaje = "Foto subida y guardada correctamente.", fotoUrl = alumno.FotoUrl });
+        }
+        // --------------------------------------------------------
+
         [HttpPut("editar-alumno/{id:int}")]
         public async Task<IActionResult> EditarAlumno(int id, [FromBody] Usuario datosActualizados)
         {
@@ -97,7 +142,6 @@ namespace GestorInventarioPrimaria.Controllers
             var tienePrestamosPendientes = await _context.Reservas.AnyAsync(r => r.UsuarioId == id && r.Estatus == "Activo");
             if (tienePrestamosPendientes) return BadRequest(new { mensaje = "No se puede eliminar al alumno porque tiene préstamos activos pendientes." });
 
-            // SOLUCIÓN BUG BD: Borrar el historial devuelto para que SQL no bloquee la eliminación
             var historialAnterior = await _context.Reservas.Where(r => r.UsuarioId == id).ToListAsync();
             if (historialAnterior.Any())
             {
@@ -212,11 +256,9 @@ namespace GestorInventarioPrimaria.Controllers
             return Ok(new { mensaje = $"¡Cierre exitoso! {promovidos} alumnos subieron de grado y {egresados} niños se marcaron como Egresados." });
         }
 
-        // --- SOLUCIÓN AL BUG: LIMPIEZA MASIVA DE EGRESADOS ---
         [HttpDelete("eliminar-egresados")]
         public async Task<IActionResult> EliminarEgresadosMasivo()
         {
-            // Buscamos conteniendo la palabra por si hay espacios ocultos
             var egresados = await _context.Usuarios
                 .Where(u => u.Rol == "Alumno" && u.Grupo != null && u.Grupo.Contains("Egresado"))
                 .ToListAsync();
@@ -229,13 +271,11 @@ namespace GestorInventarioPrimaria.Controllers
 
             foreach (var eg in egresados)
             {
-                // Verificamos si debe material activo
                 var debeMaterial = await _context.Reservas.AnyAsync(r => r.UsuarioId == eg.Id && r.Estatus == "Activo");
                 
                 if (debeMaterial) {
                     conDeuda++; 
                 } else {
-                    // EL SECRETO: Borramos sus préstamos devueltos antes de borrar al alumno
                     var historialAnterior = await _context.Reservas.Where(r => r.UsuarioId == eg.Id).ToListAsync();
                     if (historialAnterior.Any())
                     {

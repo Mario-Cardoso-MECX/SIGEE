@@ -28,5 +28,9 @@ namespace GestorInventarioPrimaria.Models
 
         [MaxLength(10)]
         public string? Grupo { get; set; } = string.Empty; // Ej: "6° A"
+
+        // --- NUEVO CAMPO PARA CREDENCIALES ---
+        [MaxLength(500)]
+        public string? FotoUrl { get; set; } // Guardará la ruta física o web de la foto del alumno
     }
 }
