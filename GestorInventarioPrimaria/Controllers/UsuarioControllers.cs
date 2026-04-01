@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using GestorInventarioPrimaria.Data;
 using GestorInventarioPrimaria.Models;
+using System.IO;
 
 namespace GestorInventarioPrimaria.Controllers
 {
@@ -76,6 +77,7 @@ namespace GestorInventarioPrimaria.Controllers
             return Ok(new { mensaje = "✅ Alumno registrado con éxito", matricula = nuevoAlumno.Matricula });
         }
 
+        // --- CORRECCIÓN DE RUTA PARA SUBIR FOTO ---
         [HttpPost("subir-foto/{matricula}")]
         public async Task<IActionResult> SubirFotoAlumno(string matricula, IFormFile foto)
         {
@@ -89,19 +91,25 @@ namespace GestorInventarioPrimaria.Controllers
             if (ext != ".jpg" && ext != ".jpeg" && ext != ".png")
                 return BadRequest(new { mensaje = "Solo se permiten imágenes JPG o PNG." });
 
-            string carpetaBase = _env.WebRootPath ?? Path.Combine(_env.ContentRootPath, "front");
+            // MAGIA PARA ENCONTRAR LA CARPETA FRONT REAL
+            string carpetaBase = _env.WebRootPath;
+            if (string.IsNullOrEmpty(carpetaBase))
+            {
+                string rutaHermano = Path.GetFullPath(Path.Combine(_env.ContentRootPath, "..", "front"));
+                carpetaBase = Directory.Exists(rutaHermano) ? rutaHermano : Path.Combine(_env.ContentRootPath, "front");
+            }
+            
             string carpetaDestino = Path.Combine(carpetaBase, "fotos_alumnos");
 
             if (!Directory.Exists(carpetaDestino))
                 Directory.CreateDirectory(carpetaDestino);
 
-            // --- MEJORA: Buscar y eliminar fotos viejas de esta misma matrícula ---
+            // Eliminar fotos viejas de esta misma matrícula
             var archivosExistentes = Directory.GetFiles(carpetaDestino, $"{matricula}.*");
             foreach (var archivoViejo in archivosExistentes)
             {
                 System.IO.File.Delete(archivoViejo);
             }
-            // ----------------------------------------------------------------------
 
             string nombreArchivo = $"{matricula}{ext}";
             string rutaCompleta = Path.Combine(carpetaDestino, nombreArchivo);
@@ -116,7 +124,7 @@ namespace GestorInventarioPrimaria.Controllers
 
             return Ok(new { mensaje = "Foto subida y guardada correctamente.", fotoUrl = alumno.FotoUrl });
         }
-        
+
         [HttpPut("editar-alumno/{id:int}")]
         public async Task<IActionResult> EditarAlumno(int id, [FromBody] Usuario datosActualizados)
         {
@@ -295,31 +303,30 @@ namespace GestorInventarioPrimaria.Controllers
         [HttpPost("sincronizar-fotos")]
         public async Task<IActionResult> SincronizarFotos()
         {
-            // 1. Ubicar la carpeta
-            string carpetaBase = _env.WebRootPath ?? Path.Combine(_env.ContentRootPath, "front");
+            string carpetaBase = _env.WebRootPath;
+            if (string.IsNullOrEmpty(carpetaBase))
+            {
+                string rutaHermano = Path.GetFullPath(Path.Combine(_env.ContentRootPath, "..", "front"));
+                carpetaBase = Directory.Exists(rutaHermano) ? rutaHermano : Path.Combine(_env.ContentRootPath, "front");
+            }
             string carpetaDestino = Path.Combine(carpetaBase, "fotos_alumnos");
 
             if (!Directory.Exists(carpetaDestino))
-                return BadRequest(new { mensaje = "No existe la carpeta fotos_alumnos. Sube al menos una foto manualmente primero." });
+                return BadRequest(new { mensaje = "No existe la carpeta 'fotos_alumnos' en tu frontend. Sube al menos una foto desde el sistema para que se cree automáticamente." });
 
-            // 2. Leer todas las fotos que haya ahí adentro
             var archivos = Directory.GetFiles(carpetaDestino);
             int vinculadas = 0;
             int ignoradas = 0;
 
             foreach (var rutaFisica in archivos)
             {
-                // Extraer el nombre del archivo sin la ruta completa (Ej: "2026-001.jpg")
                 string nombreConExt = Path.GetFileName(rutaFisica);
-                // Extraer solo la matrícula (Ej: "2026-001")
                 string matriculaExtraida = Path.GetFileNameWithoutExtension(rutaFisica);
 
-                // 3. Buscar al alumno en la BD
                 var alumno = await _context.Usuarios.FirstOrDefaultAsync(u => u.Matricula == matriculaExtraida);
 
                 if (alumno != null)
                 {
-                    // Si lo encuentra y la ruta es diferente, se la actualiza
                     string nuevaRuta = $"/fotos_alumnos/{nombreConExt}";
                     if (alumno.FotoUrl != nuevaRuta)
                     {
@@ -329,7 +336,7 @@ namespace GestorInventarioPrimaria.Controllers
                 }
                 else
                 {
-                    ignoradas++; // Hay una foto de alguien que ya no está en la BD
+                    ignoradas++; 
                 }
             }
 
