@@ -4,6 +4,27 @@ let paginaActualHistorial = 1;
 let filtroActual = 'Todos'; // Memoria del filtro activo
 let isRestoringScroll = false; // Candado para el scroll
 
+// --- NUEVO: FUNCIÓN ANTI-DUPLICADOS PARA ESCÁNER ---
+function habilitarScanner(inputId) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    
+    // El escáner presiona "Enter" rapidísimo al terminar de leer. 
+    // Al detectarlo, seleccionamos el texto para que el próximo escaneo lo sobrescriba.
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            this.select(); 
+        }
+    });
+    
+    // Por si el usuario da clic manual con el mouse, también se selecciona todo
+    input.addEventListener('focus', function() {
+        this.select();
+    });
+}
+// ----------------------------------------------------
+
 /**
  * 1. CARGAR DATOS DEL ALUMNO
  */
@@ -308,6 +329,11 @@ document.addEventListener('click', (e) => {
 
 // EVENTOS INICIALES (Incluye listeners de Scroll Doble)
 document.addEventListener('DOMContentLoaded', () => {
+
+    // --- NUEVO: Activamos la lógica del escáner en los dos buscadores clave ---
+    habilitarScanner('txtBusquedaAlumno');
+    habilitarScanner('txtBusquedaMaterial');
+
     const sesion = JSON.parse(localStorage.getItem('usuarioSesion')) || {};
     const rol = sesion.rol;
 
@@ -429,7 +455,6 @@ async function traerDatosHistorial(esCargaExtra = false) {
                 badgeEstado = `<span class="estado-devuelto">Devuelto</span>`;
             }
 
-            // --- MODIFICACIÓN: Aquí insertamos el Nombre en Negritas y la Matrícula debajo ---
             const fila = `
                 <tr style="${estiloFila}">
                     <td>

@@ -1,7 +1,28 @@
-let isRestoringScroll = false; // Candado para el scroll
+let isRestoringScroll = false; 
+
+// --- FUNCIÓN ANTI-DUPLICADOS PARA ESCÁNER ---
+function habilitarScanner(inputId) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    
+    // El escáner presiona "Enter" rapidísimo al terminar de leer. 
+    // Al detectarlo, seleccionamos el texto para que el próximo escaneo lo sobrescriba.
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            this.select(); 
+        }
+    });
+    
+    // Por si el usuario da clic manual con el mouse, también se selecciona todo
+    input.addEventListener('focus', function() {
+        this.select();
+    });
+}
 
 document.addEventListener('DOMContentLoaded', () => {
     cargarAlumnos();
+    habilitarScanner('txtFiltrarAlumnos'); // Activamos el escáner en alumnos
 
     const sesion = JSON.parse(localStorage.getItem('usuarioSesion')) || {};
     const rol = sesion.rol;
@@ -17,7 +38,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
-        // Ocultar botón de sincronizar e imprimir masivo si no son admin/secretaria
         const btnSincro = document.getElementById('btnSincronizarFotos');
         if(btnSincro) btnSincro.style.display = 'none';
 
@@ -100,7 +120,6 @@ async function cargarAlumnos() {
                 `;
             }
 
-            // MODIFICADO: Agregamos data-attributes para que la función de impresión masiva pueda extraerlos
             htmlFilas += `
                 <tr data-matricula="${a.matricula}" data-nombre="${nombreCompleto.replace(/"/g, '&quot;')}" data-grupo="${a.grupo || ''}" data-foto="${a.fotoUrl || ''}">
                     <td><strong>${a.matricula}</strong></td>
@@ -436,11 +455,12 @@ function mostrarCredencial(nombre, matricula, grupo, fotoUrl) {
 
     JsBarcode("#credBarcode", matricula, {
         format: "CODE128",
-        width: 2,
-        height: 40,
+        width: 1.5,
+        height: 35,
         displayValue: false, 
         lineColor: "#334155",
-        background: "transparent"
+        background: "transparent",
+        margin: 0
     });
 
     document.getElementById('modalCredencial').style.display = 'flex';
@@ -450,7 +470,7 @@ function cerrarModalCredencial() {
     document.getElementById('modalCredencial').style.display = 'none';
 }
 
-// IMPRESIÓN INDIVIDUAL CON TAMAÑO ESTRICTO
+// IMPRESIÓN INDIVIDUAL CON TAMAÑO ESTRICTO (54mm x 85.6mm)
 function imprimirCredencial() {
     const contenido = document.getElementById('credencialContenedor').innerHTML;
     const ventanaPrint = window.open('', '', 'width=800,height=600');
@@ -461,16 +481,17 @@ function imprimirCredencial() {
                 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
                 <style>
                     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #fff; }
-                    /* REGLA DE TAMAÑO FIJO 480px y FLEXBOX PARA ANCLAR EL CÓDIGO DE BARRAS */
-                    .credencial-box { border: 2px solid #cbd5e1; border-radius: 12px; padding: 20px; background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%); text-align: center; width: 320px; height: 480px; box-sizing: border-box; box-shadow: 0 4px 10px rgba(0,0,0,0.05); position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; margin: 0 auto; }
-                    .cabecera { background: #2c3e50; color: white; padding: 12px; margin: -20px -20px 20px -20px; font-weight: bold; font-size: 1.1rem; letter-spacing: 1px; width: calc(100% + 40px); }
-                    .foto { width: 120px; height: 120px; min-height: 120px; object-fit: cover; border-radius: 50%; border: 4px solid #3498db; margin-bottom: 10px; background: white; }
-                    .nombre-container { height: 3.5rem; display: flex; align-items: center; justify-content: center; width: 100%; overflow: hidden; margin-bottom: 5px; }
-                    .nombre { margin: 0; color: #1e293b; font-size: 1.2rem; text-transform: uppercase; line-height: 1.2; }
-                    .info { margin: 2px 0; color: #475569; font-weight: bold; font-size: 0.95rem; }
-                    /* margin-top: auto empuja esto hasta abajo sin importar el largo del nombre */
-                    .barcode-container { margin-top: auto; padding-top: 15px; border-top: 2px dashed #cbd5e1; width: 100%; }
-                    svg { max-width: 100%; height: auto; }
+                    
+                    /* TAMAÑO ESTÁNDAR CR80 (54mm x 85.6mm) */
+                    .credencial-box { border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px; background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%); text-align: center; width: 54mm; height: 85.6mm; box-sizing: border-box; box-shadow: 0 4px 10px rgba(0,0,0,0.05); position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; margin: 0 auto; }
+                    
+                    .cabecera { background: #2c3e50; color: white; padding: 6px; margin: -10px -10px 10px -10px; font-weight: bold; font-size: 0.65rem; letter-spacing: 1px; width: calc(100% + 20px); }
+                    .foto { width: 25mm; height: 25mm; min-height: 25mm; object-fit: cover; border-radius: 50%; border: 3px solid #3498db; margin-bottom: 5px; background: white; }
+                    .nombre-container { height: 2.2rem; display: flex; align-items: center; justify-content: center; width: 100%; overflow: hidden; margin-bottom: 2px; }
+                    .nombre { margin: 0; color: #1e293b; font-size: 0.75rem; text-transform: uppercase; line-height: 1.1; }
+                    .info { margin: 2px 0; color: #475569; font-weight: bold; font-size: 0.65rem; }
+                    .barcode-container { margin-top: auto; padding-top: 5px; border-top: 1px dashed #cbd5e1; width: 100%; }
+                    svg { max-width: 100%; height: 12mm; }
                 </style>
             </head>
             <body>
@@ -504,7 +525,7 @@ async function sincronizarFotosMasivas() {
     }
 }
 
-// IMPRESIÓN POR BLOQUES CON TAMAÑO ESTRICTO
+// IMPRESIÓN POR BLOQUES CON TAMAÑO ESTRICTO (54mm x 85.6mm)
 function imprimirCredencialesFiltradas() {
     const filas = document.querySelectorAll('#tablaAlumnosBody tr');
     let credencialesHTML = '';
@@ -554,19 +575,21 @@ function imprimirCredencialesFiltradas() {
                 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
                 <style>
                     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #fff; margin: 0; padding: 20px; display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; }
-                    /* REGLA DE TAMAÑO FIJO 480px y FLEXBOX PARA ANCLAR EL CÓDIGO DE BARRAS */
-                    .credencial-box { border: 2px solid #cbd5e1; border-radius: 12px; padding: 20px; background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%); text-align: center; width: 320px; height: 480px; box-sizing: border-box; box-shadow: 0 4px 10px rgba(0,0,0,0.05); position: relative; overflow: hidden; page-break-inside: avoid; display: flex; flex-direction: column; align-items: center; }
-                    .cabecera { background: #2c3e50; color: white; padding: 12px; margin: -20px -20px 20px -20px; font-weight: bold; font-size: 1.1rem; letter-spacing: 1px; width: calc(100% + 40px); }
-                    .foto { width: 120px; height: 120px; min-height: 120px; object-fit: cover; border-radius: 50%; border: 4px solid #3498db; margin-bottom: 10px; background: white; }
-                    .nombre-container { height: 3.5rem; display: flex; align-items: center; justify-content: center; width: 100%; overflow: hidden; margin-bottom: 5px; }
-                    .nombre { margin: 0; color: #1e293b; font-size: 1.2rem; text-transform: uppercase; line-height: 1.2; }
-                    .info { margin: 2px 0; color: #475569; font-weight: bold; font-size: 0.95rem; }
-                    /* margin-top: auto empuja el código de barras siempre hasta abajo */
-                    .barcode-container { margin-top: auto; padding-top: 15px; border-top: 2px dashed #cbd5e1; width: 100%; }
-                    svg { max-width: 100%; height: auto; }
+                    
+                    /* TAMAÑO ESTÁNDAR CR80 (54mm x 85.6mm) */
+                    .credencial-box { border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px; background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%); text-align: center; width: 54mm; height: 85.6mm; box-sizing: border-box; box-shadow: 0 4px 10px rgba(0,0,0,0.05); position: relative; overflow: hidden; page-break-inside: avoid; display: flex; flex-direction: column; align-items: center; }
+                    
+                    .cabecera { background: #2c3e50; color: white; padding: 6px; margin: -10px -10px 10px -10px; font-weight: bold; font-size: 0.65rem; letter-spacing: 1px; width: calc(100% + 20px); }
+                    .foto { width: 25mm; height: 25mm; min-height: 25mm; object-fit: cover; border-radius: 50%; border: 3px solid #3498db; margin-bottom: 5px; background: white; }
+                    .nombre-container { height: 2.2rem; display: flex; align-items: center; justify-content: center; width: 100%; overflow: hidden; margin-bottom: 2px; }
+                    .nombre { margin: 0; color: #1e293b; font-size: 0.75rem; text-transform: uppercase; line-height: 1.1; }
+                    .info { margin: 2px 0; color: #475569; font-weight: bold; font-size: 0.65rem; }
+                    .barcode-container { margin-top: auto; padding-top: 5px; border-top: 1px dashed #cbd5e1; width: 100%; }
+                    svg { max-width: 100%; height: 12mm; }
+                    
                     @media print {
                         body { padding: 0; display: block; }
-                        .credencial-box { float: left; margin: 10px; box-shadow: none; border: 1px solid #ccc; }
+                        .credencial-box { float: left; margin: 10px; box-shadow: none; border: 1px dashed #ccc; }
                     }
                 </style>
             </head>
@@ -576,7 +599,7 @@ function imprimirCredencialesFiltradas() {
                     window.onload = function() {
                         document.querySelectorAll('.barcode-svg').forEach(function(svg) {
                             JsBarcode(svg, svg.getAttribute('data-matricula'), {
-                                format: "CODE128", width: 2, height: 40, displayValue: false, lineColor: "#334155", background: "transparent"
+                                format: "CODE128", width: 1.5, height: 35, displayValue: false, lineColor: "#334155", background: "transparent", margin: 0
                             });
                         });
                         setTimeout(() => { window.print(); window.close(); }, 800);
