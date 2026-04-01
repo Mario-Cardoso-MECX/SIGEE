@@ -1,3 +1,7 @@
+:root {
+    --azul-primario: #2c3e50;
+}
+
 /* Contenedor Principal */
 .card-accion {
     background: white;
@@ -15,47 +19,51 @@ h2{
 
 /* Tabla Estilizada */
 .tabla-container {
-    padding: 15px;
+    max-height: 60vh;
+    overflow-y: auto;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    background-color: white;
+    margin-top: 15px;
 }
 
 .tabla-compacta {
     width: 100%;
-    border-collapse: separate;
-    border-spacing: 0 10px; /* Espaciado entre filas */
+    border-collapse: collapse;
+    table-layout: fixed;
 }
 
 .tabla-compacta thead th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background-color: var(--azul-primario);
+    color: white;
     padding: 15px;
-    color: #64748b;
-    font-weight: 800;
-    text-transform: uppercase;
-    font-size: 0.75rem;
-    letter-spacing: 1px;
-    border: none;
-    text-align: left;
+    text-align: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2); 
 }
 
 .tabla-compacta tbody tr {
-    background-color: #f8fafc;
     transition: all 0.3s ease;
 }
 
+.tabla-compacta tbody tr:nth-child(even) {
+    background-color: #f2f9ff;
+}
+
 .tabla-compacta tbody tr:hover {
-    background-color: #ffffff;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-    transform: scale(1.01);
+    background-color: #e3f2fd;
 }
 
 .tabla-compacta td {
-    padding: 18px 15px;
+    padding: 15px;
     color: #1e293b;
-    border-top: 1px solid #edf2f7;
-    border-bottom: 1px solid #edf2f7;
+    border-bottom: 1px solid #eee;
+    text-align: center;
+    vertical-align: middle;
 }
 
-/* Bordes redondeados para las filas */
-.tabla-compacta td:first-child { border-left: 1px solid #edf2f7; border-radius: 10px 0 0 10px; font-weight: 700; color: #3498db; }
-.tabla-compacta td:last-child { border-right: 1px solid #edf2f7; border-radius: 0 10px 10px 0; }
 
 /* Badge para el nombre de usuario */
 .usuario-tag {
@@ -257,17 +265,26 @@ h2{
 }
 
 
-/* --- BOTONES DE LA TABLA (Editar y Eliminar) --- */
-.acciones-celda {
+/* --- NUEVOS BOTONES DE ACCIÓN EN TABLA (Estilo Alumnos) --- */
+.acciones-flex {
     display: flex;
-    gap: 8px;
     justify-content: center;
+    gap: 8px;
+    align-items: center;
 }
 
-.btn-editar,
-.btn-eliminar{
-    border: 2px solid #2c3e50;
-    color: #2c3e50;
-    border-radius: 4px;
-    padding: 3px;
+td button {
+    width: auto !important; 
+    padding: 8px 12px !important;
+    border-radius: 6px !important;
+    border: none !important; 
+    color: white !important; 
+    cursor: pointer;
+    transition: 0.3s;
 }
+
+.btn-editar-naranja { background-color: #f39c12 !important; }
+.btn-editar-naranja:hover { background-color: #d68910 !important; }
+
+.btn-borrar-rojo { background-color: #e74c3c !important; }
+.btn-borrar-rojo:hover { background-color: #c0392b !important; }

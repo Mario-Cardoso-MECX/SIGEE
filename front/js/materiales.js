@@ -68,8 +68,10 @@ async function cargarInventario() {
             }
 
             const acciones = puedeEditar 
-                ? `<button onclick="prepararEdicion(${m.id}, '${m.titulo.replace(/'/g, "\\'")}', '${m.categoria}', ${m.stockDisponible})" class="btn-azul"><i class="fas fa-edit"></i> Editar</button>
-                   <button onclick="eliminarMaterial(${m.id})" class="btn-rojo"><i class="fa-solid fa-trash"></i> Eliminar</button>`
+                ? `<div class="acciones-flex">
+                       <button onclick="prepararEdicion(${m.id}, '${m.titulo.replace(/'/g, "\\'")}', '${m.categoria}', ${m.stockDisponible})" class="btn-editar-naranja" title="Editar"><i class="fas fa-edit"></i></button>
+                       <button onclick="eliminarMaterial(${m.id})" class="btn-borrar-rojo" title="Eliminar"><i class="fa-solid fa-trash"></i></button>
+                   </div>`
                 : `<span style="color:gray; font-size:0.85rem;">Solo lectura</span>`;
         
             htmlFilas += `
@@ -78,7 +80,7 @@ async function cargarInventario() {
                     <td><strong>${m.titulo}</strong></td>
                     <td>${m.categoria}</td>
                     <td><span style="${estiloStock}">${stock}${aviso}</span></td>
-                    <td>${acciones}</td>
+                    <td style="text-align:center;">${acciones}</td>
                 </tr>
             `;
         });
@@ -106,7 +108,7 @@ async function cargarInventario() {
 
     } catch (error) { 
         console.error(error); 
-        tabla.innerHTML = '<tr><td colspan="5">Error al cargar datos.</td></tr>';
+        tabla.innerHTML = '<tr><td colspan="5" style="color:red; text-align:center;">Error al cargar datos.</td></tr>';
     }
 }
 

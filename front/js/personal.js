@@ -1,5 +1,3 @@
-
-
 document.addEventListener('DOMContentLoaded', () => {
     // Cargamos la tabla de personal
     cargarPersonal();
@@ -28,18 +26,21 @@ async function cargarPersonal() {
         const sesion = JSON.parse(localStorage.getItem('usuarioSesion')) || {};
         const esAdmin = sesion.rol === 'Admin';
 
+        if (personal.length === 0) {
+            tabla.innerHTML = '<tr><td colspan="5" style="text-align:center;">No hay personal registrado.</td></tr>';
+            return;
+        }
+
         personal.forEach(p => {
             const nombre = p.nombre || "";
             const apellidos = p.apellidos || "";
             const nombreCompleto = `${nombre} ${apellidos}`.trim();
 
            const acciones = esAdmin 
-                ? `<button onclick="prepararEditar(${p.id})" class="btn-tabla btn-editar">
-                       <i class="fa-solid fa-pen-to-square"></i> Editar
-                   </button>
-                   <button onclick="eliminarAdmin(${p.id}, '${nombreCompleto || p.username}')" class="btn-tabla btn-eliminar">
-                       <i class="fa-solid fa-trash"></i> Eliminar
-                   </button>`
+                ? `<div class="acciones-flex">
+                       <button onclick="prepararEditar(${p.id})" class="btn-editar-naranja" title="Editar"><i class="fa-solid fa-pen-to-square"></i></button>
+                       <button onclick="eliminarAdmin(${p.id}, '${nombreCompleto || p.username}')" class="btn-borrar-rojo" title="Eliminar"><i class="fa-solid fa-trash"></i></button>
+                   </div>`
                 : `<span style="color:gray; font-size:0.85rem;">Solo lectura</span>`;
 
             tabla.innerHTML += `
@@ -48,14 +49,14 @@ async function cargarPersonal() {
                     <td>${nombreCompleto || p.username}</td>
                     <td><span class="usuario-tag">@${p.username}</span></td>
                     <td><span class="rol-tag">${p.rol}</span></td>
-                    <td>${acciones}</td>
+                    <td style="text-align:center;">${acciones}</td>
                 </tr>
             `;
         });
     } catch (error) {
         console.error("Error al cargar personal:", error);
         document.getElementById('tablaPersonal').innerHTML = `
-            <tr><td colspan="4" style="text-align:center; color:red;">Error al conectar con el servidor</td></tr>
+            <tr><td colspan="5" style="text-align:center; color:red;">Error al conectar con el servidor</td></tr>
         `;
     }
 }
