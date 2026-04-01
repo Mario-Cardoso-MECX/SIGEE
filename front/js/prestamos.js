@@ -330,7 +330,6 @@ document.addEventListener('DOMContentLoaded', () => {
     contenedoresTabla.forEach((contenedor, index) => {
         contenedor.addEventListener('scroll', () => {
             if (!isRestoringScroll) {
-                // index 0 puede ser la de pendientes, index 1 la de historial
                 sessionStorage.setItem('scroll_prestamos_interno_' + index + '_' + filtroActual, contenedor.scrollTop);
             }
         });
@@ -430,9 +429,13 @@ async function traerDatosHistorial(esCargaExtra = false) {
                 badgeEstado = `<span class="estado-devuelto">Devuelto</span>`;
             }
 
+            // --- MODIFICACIÓN: Aquí insertamos el Nombre en Negritas y la Matrícula debajo ---
             const fila = `
                 <tr style="${estiloFila}">
-                    <td>${h.alumno}</td>
+                    <td>
+                        <strong>${h.alumno}</strong><br>
+                        <small style="color:#64748b;">Mat: ${h.matricula || 'N/A'}</small>
+                    </td>
                     <td>${h.material}</td>
                     <td>${fInicioStr}</td>
                     <td>

@@ -207,7 +207,10 @@ namespace GestorInventarioPrimaria.Controllers
                 .Take(cantidad)
                 .Select(r => new {
                     IdReserva = r.Id,
-                    Alumno = r.Usuario.Nombre,
+                    // --- MODIFICACIÓN: Ahora enviamos Nombre Completo y Matrícula ---
+                    Alumno = (r.Usuario.Nombre + " " + r.Usuario.Apellidos).Trim(),
+                    Matricula = r.Usuario.Matricula,
+                    // ----------------------------------------------------------------
                     Material = r.Material.Titulo,
                     FechaInicioRaw = r.FechaInicio,
                     FechaVencimiento = r.FechaFinEsperada,
