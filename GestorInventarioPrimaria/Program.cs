@@ -54,19 +54,31 @@ app.UseHttpsRedirection();
 // --- CONFIGURACIÓN PARA ARCHIVOS ESTÁTICOS (LAS FOTOS Y EL FRONTEND) ---
 app.UseDefaultFiles(); 
 
-// Si estamos en desarrollo en Visual Studio, la carpeta se llama "front"
-if (Directory.Exists(Path.Combine(builder.Environment.ContentRootPath, "front")))
+// CORRECCIÓN: Le enseñamos a Program.cs a dar "un paso atrás" igual que el controlador
+string rutaFront = Path.Combine(builder.Environment.ContentRootPath, "front");
+string rutaHermano = Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, "..", "front"));
+
+if (Directory.Exists(rutaHermano))
 {
+    // Si encuentra la carpeta "front" afuera del backend (Entorno Visual Studio)
     app.UseStaticFiles(new StaticFileOptions
     {
-        FileProvider = new PhysicalFileProvider(
-            Path.Combine(builder.Environment.ContentRootPath, "front")),
+        FileProvider = new PhysicalFileProvider(rutaHermano),
+        RequestPath = "" 
+    });
+}
+else if (Directory.Exists(rutaFront))
+{
+    // Si la encuentra adentro (Por si acaso)
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new PhysicalFileProvider(rutaFront),
         RequestPath = "" 
     });
 }
 else
 {
-    // Si estamos en producción (IIS o SmarterASP), la carpeta se llamará "wwwroot"
+    // Si estamos en producción (IIS o SmarterASP), la carpeta se llamará "wwwroot" y usa la ruta por defecto
     app.UseStaticFiles(); 
 }
 // --------------------------------------------------
