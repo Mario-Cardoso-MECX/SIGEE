@@ -19,6 +19,9 @@ function construirInterfaz() {
             <a href="alumnos.html" id="nav-alumnos"><i class="fas fa-user-graduate"></i> Alumnos</a>
             <a href="materiales.html" id="nav-materiales"><i class="fas fa-book"></i> Inventario</a>
             <a href="prestamos.html" id="nav-prestamos"><i class="fas fa-hand-holding"></i> Préstamos</a>
+            
+            <a href="aulas.html" id="nav-aulas"><i class="fas fa-laptop-house"></i> Aula de Medios</a>
+            
             <a href="personal.html" id="nav-personal"><i class="fas fa-user-shield"></i> Personal</a>
         </nav>
         <div class="sidebar-footer">
@@ -35,11 +38,12 @@ function construirInterfaz() {
     const path = window.location.pathname;
     const pagina = path.split("/").pop();
     
-    if (pagina.includes('dashboard')) document.getElementById('nav-inicio').classList.add('active');
-    if (pagina.includes('alumnos')) document.getElementById('nav-alumnos').classList.add('active');
-    if (pagina.includes('materiales')) document.getElementById('nav-materiales').classList.add('active');
-    if (pagina.includes('prestamos')) document.getElementById('nav-prestamos').classList.add('active');
-    if (pagina.includes('personal')) document.getElementById('nav-personal').classList.add('active');
+    if (pagina.includes('dashboard')) { const e = document.getElementById('nav-inicio'); if(e) e.classList.add('active'); }
+    if (pagina.includes('alumnos')) { const e = document.getElementById('nav-alumnos'); if(e) e.classList.add('active'); }
+    if (pagina.includes('materiales')) { const e = document.getElementById('nav-materiales'); if(e) e.classList.add('active'); }
+    if (pagina.includes('prestamos')) { const e = document.getElementById('nav-prestamos'); if(e) e.classList.add('active'); }
+    if (pagina.includes('aulas')) { const e = document.getElementById('nav-aulas'); if(e) e.classList.add('active'); }
+    if (pagina.includes('personal')) { const e = document.getElementById('nav-personal'); if(e) e.classList.add('active'); }
 }
 
 // --- FUNCIÓN GLOBAL PARA EXPORTAR TABLAS A EXCEL ---
