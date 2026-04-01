@@ -29,6 +29,12 @@ namespace GestorInventarioPrimaria.Controllers
                 return BadRequest("❌ No existe ningún usuario con esa matrícula.");
             }
 
+            // --- NUEVO: BLOQUEO ESTRICTO A EGRESADOS ---
+            if (usuario.Grupo == "Egresado")
+            {
+                return BadRequest($"❌ {usuario.Nombre} es un alumno Egresado. Ya no se le puede prestar material.");
+            }
+
             //  VALIDAR MATERIAL (Libro, Balón o Salón)
             var material = await _context.Materiales.FindAsync(datos.MaterialId);
 

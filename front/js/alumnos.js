@@ -110,6 +110,9 @@ async function cargarAlumnos() {
 
         tabla.innerHTML = htmlFilas;
 
+        // NUEVO: Reaplicar filtros después de cargar (para el filtro de grado)
+        aplicarFiltrosAlumnos();
+        
         const inputBuscar = document.getElementById('txtFiltrarAlumnos');
         const termActual = inputBuscar ? inputBuscar.value.toLowerCase().trim() : '';
 
@@ -250,6 +253,9 @@ function prepararEdicionAlumno(id, nombre, apellidos, grupoCompleto) {
         if(partes.length === 2) {
             document.getElementById('gradoAlumno').value = partes[0];
             document.getElementById('grupoLetra').value = partes[1];
+        } else if (grupoCompleto === "Egresado") {
+            document.getElementById('gradoAlumno').value = "";
+            document.getElementById('grupoLetra').value = "";
         }
     }
 
@@ -259,31 +265,99 @@ function prepararEdicionAlumno(id, nombre, apellidos, grupoCompleto) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// BUSCADOR INTELIGENTE
+// --- NUEVO: DESCARGA EXCEL INTELIGENTE ---
+async function preguntarExportacionExcel() {
+    const termGrado = document.getElementById('selFiltroGrado').value;
+    const termLetra = document.getElementById('selFiltroLetra').value;
+    const termText = document.getElementById('txtFiltrarAlumnos').value;
+
+    if (!termGrado && !termLetra && !termText) {
+        exportarTablaExcel('tablaAlumnos', 'Reporte_Escuela_Completa', false);
+        return;
+    }
+
+    const result = await Swal.fire({
+        title: 'Opciones de Exportación',
+        text: 'Tienes filtros de búsqueda activos. ¿Qué lista deseas descargar en Excel?',
+        icon: 'question',
+        showCancelButton: true,
+        showDenyButton: true,
+        confirmButtonColor: '#27ae60',
+        denyButtonColor: '#2c3e50',
+        cancelButtonColor: '#95a5a6',
+        confirmButtonText: '<i class="fas fa-filter"></i> Lista Filtrada',
+        denyButtonText: '<i class="fas fa-users"></i> Toda la Escuela',
+        cancelButtonText: 'Cancelar'
+    });
+
+    if (result.isConfirmed) {
+        let sufijo = "";
+        if(termGrado) sufijo += termGrado;
+        if(termLetra) sufijo += termLetra;
+        
+        let nombre = sufijo ? `Reporte_Alumnos_${sufijo}` : 'Reporte_Alumnos_Filtrados';
+        exportarTablaExcel('tablaAlumnos', nombre, true); 
+    } else if (result.isDenied) {
+        exportarTablaExcel('tablaAlumnos', 'Reporte_Escuela_Completa', false); 
+    }
+}
+
+// --- MODIFICADO: BUSCADOR CON FILTRO DOBLE (GRADO Y LETRA) ---
 let tiempoEsperaBuscadorAlumnos;
 const inputBuscadorAlumnos = document.getElementById('txtFiltrarAlumnos');
+const selectFiltroGrado = document.getElementById('selFiltroGrado');
+const selectFiltroLetra = document.getElementById('selFiltroLetra');
+const btnBorrarEgresados = document.getElementById('btnBorrarEgresados');
+
+function aplicarFiltrosAlumnos() {
+    const termText = inputBuscadorAlumnos ? inputBuscadorAlumnos.value.toLowerCase().trim() : '';
+    const termGrado = selectFiltroGrado ? selectFiltroGrado.value : '';
+    const termLetra = selectFiltroLetra ? selectFiltroLetra.value : '';
+    const sesion = JSON.parse(localStorage.getItem('usuarioSesion')) || {};
+
+    if (termGrado === "Egresado") {
+        if(selectFiltroLetra) selectFiltroLetra.style.display = 'none';
+        
+        if (sesion.rol === 'Admin' || sesion.rol === 'Secretaria') {
+            if(btnBorrarEgresados) btnBorrarEgresados.style.display = 'inline-block';
+        }
+    } else {
+        if(selectFiltroLetra) selectFiltroLetra.style.display = 'inline-block';
+        if(btnBorrarEgresados) btnBorrarEgresados.style.display = 'none';
+    }
+
+    const rows = document.querySelectorAll('#tablaAlumnosBody tr');
+    
+    rows.forEach(r => {
+        if (!r.children[2]) return;
+        const tdGrupo = r.children[2].textContent;
+        const textoFila = r.textContent.toLowerCase();
+
+        const coincideTexto = termText === '' || textoFila.includes(termText);
+        const coincideGrado = termGrado === '' || tdGrupo.includes(termGrado);
+        const coincideLetra = termLetra === '' || termGrado === "Egresado" || tdGrupo.includes(termLetra);
+
+        if (coincideTexto && coincideGrado && coincideLetra) {
+            r.style.display = ''; 
+        } else {
+            r.style.display = 'none';
+        }
+    });
+
+    // Se mantiene el candado para no hacer saltos bruscos
+    if(termText === '' && termGrado === '' && termLetra === ''){
+        restaurarAmbosScrolls(termText);
+    }
+}
 
 if (inputBuscadorAlumnos) {
-    inputBuscadorAlumnos.addEventListener('input', (e) => {
-        const term = e.target.value.toLowerCase().trim();
-        
+    inputBuscadorAlumnos.addEventListener('input', () => {
         clearTimeout(tiempoEsperaBuscadorAlumnos);
-        
-        tiempoEsperaBuscadorAlumnos = setTimeout(() => {
-            const rows = document.querySelectorAll('#tablaAlumnosBody tr');
-            
-            rows.forEach(r => {
-                if (term === '') {
-                    r.style.display = ''; 
-                } else {
-                    r.style.display = r.textContent.toLowerCase().includes(term) ? '' : 'none';
-                }
-            });
-
-            restaurarAmbosScrolls(term);
-        }, 500); 
+        tiempoEsperaBuscadorAlumnos = setTimeout(aplicarFiltrosAlumnos, 500); 
     });
-} 
+}
+if (selectFiltroGrado) { selectFiltroGrado.addEventListener('change', aplicarFiltrosAlumnos); }
+if (selectFiltroLetra) { selectFiltroLetra.addEventListener('change', aplicarFiltrosAlumnos); }
 
 // PROMOCIÓN MASIVA
 async function promoverCicloEscolar() {
@@ -326,6 +400,37 @@ async function promoverCicloEscolar() {
         } catch (error) {
             console.error(error);
             Swal.fire('Error de conexión', 'No se pudo contactar con el servidor.', 'error');
+        }
+    }
+}
+
+// --- NUEVO: LIMPIEZA MASIVA DE EGRESADOS ---
+async function eliminarEgresadosMasivo() {
+    const confirmacion = await Swal.fire({
+        title: '¿Limpiar Egresados?',
+        text: "Se borrarán todos los egresados del sistema. Aquellos que aún tengan libros pendientes de devolver se mantendrán en la base de datos hasta que liquiden.",
+        icon: 'warning',
+        showCancelButton: true, 
+        confirmButtonColor: '#dc2626', 
+        confirmButtonText: '<i class="fa-solid fa-broom"></i> Sí, limpiar egresados', 
+        cancelButtonText: 'Cancelar'
+    });
+
+    if (confirmacion.isConfirmed) {
+        Swal.fire({ title: 'Limpiando base de datos...', didOpen: () => { Swal.showLoading() } });
+        try {
+            const response = await fetch(`${API_URL}/Usuarios/eliminar-egresados`, { method: 'DELETE' });
+            const data = await response.json();
+            
+            if (response.ok) {
+                const icono = data.mensaje.includes('⚠️') ? 'warning' : 'success';
+                Swal.fire({ title: 'Proceso completado', text: data.mensaje, icon: icono });
+                cargarAlumnos(); 
+            } else { 
+                Swal.fire('Atención', data.mensaje || 'Hubo un problema.', 'error'); 
+            }
+        } catch (error) { 
+            Swal.fire('Error', 'No se pudo contactar con el servidor.', 'error'); 
         }
     }
 }

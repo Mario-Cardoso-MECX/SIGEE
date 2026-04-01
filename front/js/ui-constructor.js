@@ -43,8 +43,8 @@ function construirInterfaz() {
 }
 
 // --- FUNCIÓN GLOBAL PARA EXPORTAR TABLAS A EXCEL ---
-// --- FUNCIÓN GLOBAL PARA EXPORTAR TABLAS A EXCEL ---
-function exportarTablaExcel(idTabla, nombreArchivo) {
+// NUEVO: Agregamos parámetro 'soloVisibles' con valor por defecto false
+function exportarTablaExcel(idTabla, nombreArchivo, soloVisibles = false) {
     const tablaOriginal = document.getElementById(idTabla);
     if (!tablaOriginal) {
         Swal.fire('Error', 'No se encontró la tabla para exportar.', 'error');
@@ -57,6 +57,13 @@ function exportarTablaExcel(idTabla, nombreArchivo) {
     // 2. Eliminamos la última columna ("Acciones") para que el Excel salga limpio
     const filas = tablaClonada.querySelectorAll('tr');
     filas.forEach(fila => {
+        // Si el usuario eligió "Solo Filtrados" y la fila está oculta por el buscador/filtro, la borramos del Excel
+        if (soloVisibles && fila.style.display === 'none') {
+            fila.parentNode.removeChild(fila);
+            return; // Saltamos a la siguiente
+        }
+
+        // Eliminamos la última columna ("Acciones")
         if (fila.children.length > 0) {
             fila.removeChild(fila.lastElementChild);
         }
