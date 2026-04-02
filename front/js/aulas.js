@@ -14,23 +14,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function cargarReservas() {
     const tabla = document.getElementById('tablaAulasBody');
-    const sesion = JSON.parse(localStorage.getItem('usuarioSesion')) || {};
+    const sesionStr = localStorage.getItem('usuarioSesion');
+    const sesion = JSON.parse(sesionStr) || {};
     const rol = sesion.rol;
     const esAdminOSecre = (rol === 'Admin' || rol === 'Secretaria');
     
     // ==========================================
-    // ESCUDO NIVEL DIOS (Triple validación + Limpiador de #)
+    // DETECTIVES EN ACCIÓN
+    // Imprimimos la sesión completa para ver cómo se llaman las propiedades reales
     // ==========================================
-    const miUsuarioId = parseInt(sesion.id || sesion.Id || sesion.usuarioId || sesion.UsuarioId || 0);
+    console.log("---- SESIÓN ACTUAL RAW ----");
+    console.log(sesionStr);
+
+    // Intentamos sacar los datos de TODAS las formas posibles (basados en tu base de datos)
+    // A veces se guarda como 'id', a veces como 'IdUsuario' (de otras tablas)
+    let miUsuarioIdStr = sesion.id || sesion.Id || sesion.usuarioId || sesion.UsuarioId || sesion.IdUsuario || sesion.idUsuario || "0";
+    const miUsuarioId = parseInt(miUsuarioIdStr, 10);
     
-    // Limpiamos nuestra matrícula de cualquier símbolo # o espacios
     const miMatricula = (sesion.matricula || sesion.Matricula || sesion.username || sesion.Username || '')
                         .toString().replace('#', '').trim().toLowerCase();
     
     const miNombreCompleto = `${sesion.nombre || ''} ${sesion.apellidos || ''}`.trim().toLowerCase();
 
+    console.log(`Mis Datos Extraídos -> ID: ${miUsuarioId}, Matrícula: '${miMatricula}', Nombre: '${miNombreCompleto}'`);
+
     try {
-        const response = await fetch(`${API_URL}/Aulas/reservas`);
+        // Truco anti-caché: agregar timestamp
+        const urlFresca = `${API_URL}/Aulas/reservas?t=${new Date().getTime()}`;
+        const response = await fetch(urlFresca);
         const reservas = await response.json();
         
         tabla.innerHTML = '';
@@ -40,6 +51,8 @@ async function cargarReservas() {
             return;
         }
 
+        console.log("---- RESERVAS DESDE C# ----");
+
         reservas.forEach(r => {
             let badge = '';
             if(r.estatus === 'Pendiente') badge = '<span class="badge pendiente"><i class="fas fa-clock"></i> Pendiente</span>';
@@ -48,36 +61,34 @@ async function cargarReservas() {
 
             let acciones = '';
             
-            // Botones exclusivos de Directiva (Solo si está pendiente)
             if(esAdminOSecre && r.estatus === 'Pendiente') {
                 acciones += `<button onclick="aprobarReserva(${r.id})" style="background:#27ae60; color:white; border:none; padding:8px 12px; border-radius:5px; margin-right:5px; cursor:pointer;" title="Aprobar"><i class="fas fa-check"></i></button>`;
                 acciones += `<button onclick="rechazarReserva(${r.id})" style="background:#e74c3c; color:white; border:none; padding:8px 12px; border-radius:5px; margin-right:5px; cursor:pointer;" title="Rechazar"><i class="fas fa-times"></i></button>`;
             }
             
-            // ==========================================
-            // LÓGICA DE CANCELACIÓN (Limpiando el símbolo # de la base de datos)
-            // ==========================================
-            const idReserva = parseInt(r.usuarioId || r.UsuarioId || 0);
-            
-            // Limpiamos la matrícula que viene de la reserva
-            const matriculaReserva = (r.matriculaProfesor || '')
-                                     .toString().replace('#', '').trim().toLowerCase();
-            
+            const idReserva = parseInt(r.usuarioId || 0, 10);
+            const matriculaReserva = (r.matriculaProfesor || '').toString().replace('#', '').trim().toLowerCase();
             const nombreReserva = (r.nombreProfesor || '').toString().trim().toLowerCase();
             
-            // ¿Es mi reserva? (Validación cruzada limpia)
-            const esMiReserva = (miUsuarioId > 0 && idReserva === miUsuarioId) || 
-                                (miMatricula !== '' && matriculaReserva === miMatricula) ||
-                                (miNombreCompleto !== '' && nombreReserva === miNombreCompleto);
+            console.log(`Reserva #${r.id} (${nombreReserva}) -> IDBD: ${idReserva}, MatBD: '${matriculaReserva}'`);
 
-            // El dueño o los directivos pueden cancelar
+            // VALIDACIÓN SÚPER LAXA: Si cualquier dato medio cuadra, se lo damos por bueno
+            const coincidenciaPorId = (miUsuarioId > 0 && idReserva === miUsuarioId);
+            const coincidenciaPorMatricula = (miMatricula !== '' && matriculaReserva === miMatricula);
+            const coincidenciaPorNombre = (miNombreCompleto !== '' && miNombreCompleto !== ' ' && nombreReserva.includes(miNombreCompleto));
+
+            const esMiReserva = coincidenciaPorId || coincidenciaPorMatricula || coincidenciaPorNombre;
+
+            console.log(`   ¿Hizo match? ID: ${coincidenciaPorId}, Matrícula: ${coincidenciaPorMatricula}, Nombre: ${coincidenciaPorNombre} => TOTAL: ${esMiReserva}`);
+
+            // Si es Admin, o si hizo Match, mostramos el basurero
             if(esAdminOSecre || esMiReserva) {
                 acciones += `<button onclick="cancelarReserva(${r.id})" style="background:#7f8c8d; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer;" title="Eliminar/Cancelar Mi Reserva"><i class="fas fa-trash"></i></button>`;
             }
 
-            const horaInicio = r.horaInicio.substring(0,5);
-            const horaFin = r.horaFin.substring(0,5);
-            const fechaLocal = new Date(r.fecha + 'T12:00:00').toLocaleDateString('es-MX');
+            const horaInicio = (r.horaInicio || "").substring(0,5);
+            const horaFin = (r.horaFin || "").substring(0,5);
+            const fechaLocal = r.fecha ? new Date(r.fecha + 'T12:00:00').toLocaleDateString('es-MX') : '';
 
             tabla.innerHTML += `
                 <tr>
@@ -90,7 +101,7 @@ async function cargarReservas() {
             `;
         });
     } catch(e) {
-        console.error(e);
+        console.error("Error catastrofico en JS:", e);
         tabla.innerHTML = '<tr><td colspan="5" style="color:red;">Error al cargar. Revisa la consola.</td></tr>';
     }
 }
