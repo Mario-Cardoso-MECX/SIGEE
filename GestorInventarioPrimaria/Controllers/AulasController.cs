@@ -26,9 +26,9 @@ namespace GestorInventarioPrimaria.Controllers
                 .ThenBy(r => r.HoraInicio)
                 .ToListAsync();
 
-            // Mapeamos a un objeto a la medida para enviarle la matrícula exacta al frontend
             var resultado = reservas.Select(r => new {
                 id = r.Id,
+                usuarioId = r.UsuarioId, // MAGIA: Devolvemos el ID real numérico
                 matriculaProfesor = r.Usuario != null ? (r.Usuario.Matricula ?? r.Usuario.Username) : "",
                 nombreProfesor = r.Usuario != null ? $"{r.Usuario.Nombre} {r.Usuario.Apellidos}" : "Usuario Borrado",
                 fecha = r.Fecha.ToString("yyyy-MM-dd"),
@@ -41,7 +41,6 @@ namespace GestorInventarioPrimaria.Controllers
             return Ok(resultado);
         }
 
-        // Estructura temporal para recibir la petición del Frontend en texto
         public class SolicitudAulaDto
         {
             public string Matricula { get; set; } = "";
@@ -55,7 +54,6 @@ namespace GestorInventarioPrimaria.Controllers
         [HttpPost("solicitar")]
         public async Task<IActionResult> SolicitarReserva([FromBody] SolicitudAulaDto dto)
         {
-            // Buscamos al maestro por su matrícula (PER-2026-001) o username
             var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Matricula == dto.Matricula || u.Username == dto.Matricula);
             
             if (usuario == null)

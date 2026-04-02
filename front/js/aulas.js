@@ -1,8 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // Evitar que pidan para días en el pasado
     const hoy = new Date().toISOString().split('T')[0];
     const txtFecha = document.getElementById('txtFechaReserva');
     if(txtFecha) txtFecha.setAttribute('min', hoy);
 
+    // Ocultar panel de petición a directivos
     const sesion = JSON.parse(localStorage.getItem('usuarioSesion')) || {};
     if (sesion.rol === 'Admin' || sesion.rol === 'Secretaria') {
         const panel = document.getElementById('panelSolicitud');
@@ -16,10 +18,14 @@ async function cargarReservas() {
     const tabla = document.getElementById('tablaAulasBody');
     const sesion = JSON.parse(localStorage.getItem('usuarioSesion')) || {};
     const rol = sesion.rol;
-    
-    // MAGIA: Leer la matrícula en texto (Ej: "PER-2026-001")
-    const miMatricula = sesion.matricula || sesion.Matricula || sesion.username || sesion.Username;
     const esAdminOSecre = (rol === 'Admin' || rol === 'Secretaria');
+    
+    // ==========================================
+    // EL ESCUDO DEFINITIVO DE IDENTIDAD
+    // Buscamos el ID y la Matrícula sin importar cómo estén escritos en LocalStorage
+    // ==========================================
+    const miUsuarioId = parseInt(sesion.id || sesion.Id || sesion.usuarioId || sesion.UsuarioId || sesion.idUsuario || sesion.IdUsuario || 0);
+    const miMatricula = (sesion.matricula || sesion.Matricula || sesion.username || sesion.Username || '').toString().trim().toLowerCase();
 
     try {
         const response = await fetch(`${API_URL}/Aulas/reservas`);
@@ -40,13 +46,23 @@ async function cargarReservas() {
 
             let acciones = '';
             
+            // Botones de Directiva
             if(esAdminOSecre && r.estatus === 'Pendiente') {
                 acciones += `<button onclick="aprobarReserva(${r.id})" style="background:#27ae60; color:white; border:none; padding:8px 12px; border-radius:5px; margin-right:5px; cursor:pointer;" title="Aprobar"><i class="fas fa-check"></i></button>`;
                 acciones += `<button onclick="rechazarReserva(${r.id})" style="background:#e74c3c; color:white; border:none; padding:8px 12px; border-radius:5px; margin-right:5px; cursor:pointer;" title="Rechazar"><i class="fas fa-times"></i></button>`;
             }
             
-            // Profesores solo borran la suya comparando su matrícula
-            if(esAdminOSecre || r.matriculaProfesor === miMatricula) {
+            // ==========================================
+            // LÓGICA INFALIBLE PARA MOSTRAR EL BASURERO
+            // ==========================================
+            const idReserva = parseInt(r.usuarioId || r.UsuarioId || 0);
+            const matriculaReserva = (r.matriculaProfesor || '').toString().trim().toLowerCase();
+            
+            // ¿Es mía esta reserva? (Comprobamos por número ID Y por Matrícula de texto)
+            const esMiReserva = (miUsuarioId > 0 && idReserva === miUsuarioId) || 
+                                (miMatricula !== '' && matriculaReserva === miMatricula);
+
+            if(esAdminOSecre || esMiReserva) {
                 acciones += `<button onclick="cancelarReserva(${r.id})" style="background:#7f8c8d; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer;" title="Eliminar/Cancelar"><i class="fas fa-trash"></i></button>`;
             }
 
@@ -77,8 +93,6 @@ async function solicitarReserva() {
     const motivo = document.getElementById('txtMotivo').value;
     
     const sesion = JSON.parse(localStorage.getItem('usuarioSesion')) || {};
-    
-    // MAGIA: Usamos la Matrícula textual ("PER-2026-001")
     const miMatricula = sesion.matricula || sesion.Matricula || sesion.username || sesion.Username;
 
     if (!miMatricula) {
@@ -98,7 +112,7 @@ async function solicitarReserva() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                Matricula: miMatricula, // Enviamos el texto puro a C#
+                Matricula: miMatricula, 
                 Fecha: fecha,
                 HoraInicio: hInicio,
                 HoraFin: hFin,
