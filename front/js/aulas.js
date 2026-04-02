@@ -1,8 +1,13 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Evitar que pidan para días en el pasado
     const hoy = new Date().toISOString().split('T')[0];
     const txtFecha = document.getElementById('txtFechaReserva');
     if(txtFecha) txtFecha.setAttribute('min', hoy);
+
+    const sesion = JSON.parse(localStorage.getItem('usuarioSesion')) || {};
+    if (sesion.rol === 'Admin' || sesion.rol === 'Secretaria') {
+        const panel = document.getElementById('panelSolicitud');
+        if(panel) panel.style.display = 'none';
+    }
 
     cargarReservas();
 });
@@ -12,8 +17,8 @@ async function cargarReservas() {
     const sesion = JSON.parse(localStorage.getItem('usuarioSesion')) || {};
     const rol = sesion.rol;
     
-    // MAGIA: Buscar el ID de todas las formas posibles
-    const miUsuarioId = sesion.id || sesion.Id || sesion.usuarioId || sesion.UsuarioId;
+    // MAGIA: Leer la matrícula en texto (Ej: "PER-2026-001")
+    const miMatricula = sesion.matricula || sesion.Matricula || sesion.username || sesion.Username;
     const esAdminOSecre = (rol === 'Admin' || rol === 'Secretaria');
 
     try {
@@ -40,7 +45,8 @@ async function cargarReservas() {
                 acciones += `<button onclick="rechazarReserva(${r.id})" style="background:#e74c3c; color:white; border:none; padding:8px 12px; border-radius:5px; margin-right:5px; cursor:pointer;" title="Rechazar"><i class="fas fa-times"></i></button>`;
             }
             
-            if(esAdminOSecre || r.usuarioId === miUsuarioId) {
+            // Profesores solo borran la suya comparando su matrícula
+            if(esAdminOSecre || r.matriculaProfesor === miMatricula) {
                 acciones += `<button onclick="cancelarReserva(${r.id})" style="background:#7f8c8d; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer;" title="Eliminar/Cancelar"><i class="fas fa-trash"></i></button>`;
             }
 
@@ -72,12 +78,11 @@ async function solicitarReserva() {
     
     const sesion = JSON.parse(localStorage.getItem('usuarioSesion')) || {};
     
-    // MAGIA: Buscar el ID de todas las formas posibles
-    const miUsuarioId = sesion.id || sesion.Id || sesion.usuarioId || sesion.UsuarioId;
+    // MAGIA: Usamos la Matrícula textual ("PER-2026-001")
+    const miMatricula = sesion.matricula || sesion.Matricula || sesion.username || sesion.Username;
 
-    // Si de plano no hay ID en la sesión, frenamos todo antes de que truene
-    if (!miUsuarioId) {
-        Swal.fire('Sesión no detectada', 'No pudimos identificar tu cuenta. Por favor, dale clic a "Cerrar Sesión" en el menú izquierdo y vuelve a entrar.', 'error');
+    if (!miMatricula) {
+        Swal.fire('Sesión no detectada', 'No pudimos detectar tu matrícula. Cierra sesión y vuelve a entrar.', 'error');
         return;
     }
 
@@ -93,25 +98,32 @@ async function solicitarReserva() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                usuarioId: miUsuarioId, // MANDAMOS EL ID SEGURO
-                fecha: fecha,
-                horaInicio: hInicio,
-                horaFin: hFin,
-                motivo: motivo
+                Matricula: miMatricula, // Enviamos el texto puro a C#
+                Fecha: fecha,
+                HoraInicio: hInicio,
+                HoraFin: hFin,
+                Motivo: motivo
             })
         });
 
-        const data = await response.json();
-
-        if(response.ok) {
-            Swal.fire('¡Éxito!', data.mensaje, 'success');
-            document.getElementById('formReservaAula').reset();
-            cargarReservas();
-        } else {
-            Swal.fire('Atención', data.mensaje, 'warning');
+        if (!response.ok) {
+            const errorText = await response.text();
+            try {
+                const errObj = JSON.parse(errorText);
+                Swal.fire('Atención', errObj.mensaje || 'Error al solicitar.', 'warning');
+            } catch {
+                Swal.fire('Error del Servidor', 'Detalles en consola (F12).', 'error');
+            }
+            return;
         }
+
+        const data = await response.json();
+        Swal.fire('¡Éxito!', data.mensaje, 'success');
+        document.getElementById('formReservaAula').reset();
+        cargarReservas();
+        
     } catch(e) {
-        Swal.fire('Error', 'Error de conexión con el servidor', 'error');
+        Swal.fire('Error', 'Fallo de red o servidor apagado.', 'error');
     }
 }
 

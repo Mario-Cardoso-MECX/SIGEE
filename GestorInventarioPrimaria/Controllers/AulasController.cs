@@ -18,7 +18,7 @@ namespace GestorInventarioPrimaria.Controllers
 
         // 1. Obtener todas las reservas
         [HttpGet("reservas")]
-        public async Task<ActionResult<IEnumerable<ReservaAula>>> GetReservas()
+        public async Task<ActionResult<IEnumerable<object>>> GetReservas()
         {
             var reservas = await _context.ReservasAula
                 .Include(r => r.Usuario)
@@ -26,48 +26,67 @@ namespace GestorInventarioPrimaria.Controllers
                 .ThenBy(r => r.HoraInicio)
                 .ToListAsync();
 
-            foreach (var r in reservas)
-            {
-                if (r.Usuario != null)
-                    r.NombreProfesor = $"{r.Usuario.Nombre} {r.Usuario.Apellidos}";
-            }
+            // Mapeamos a un objeto a la medida para enviarle la matrícula exacta al frontend
+            var resultado = reservas.Select(r => new {
+                id = r.Id,
+                matriculaProfesor = r.Usuario != null ? (r.Usuario.Matricula ?? r.Usuario.Username) : "",
+                nombreProfesor = r.Usuario != null ? $"{r.Usuario.Nombre} {r.Usuario.Apellidos}" : "Usuario Borrado",
+                fecha = r.Fecha.ToString("yyyy-MM-dd"),
+                horaInicio = r.HoraInicio.ToString(@"hh\:mm\:ss"),
+                horaFin = r.HoraFin.ToString(@"hh\:mm\:ss"),
+                estatus = r.Estatus,
+                motivo = r.Motivo
+            });
 
-            return Ok(reservas);
+            return Ok(resultado);
+        }
+
+        // Estructura temporal para recibir la petición del Frontend en texto
+        public class SolicitudAulaDto
+        {
+            public string Matricula { get; set; } = "";
+            public DateTime Fecha { get; set; }
+            public TimeSpan HoraInicio { get; set; }
+            public TimeSpan HoraFin { get; set; }
+            public string Motivo { get; set; } = "";
         }
 
         // 2. Solicitar un horario
         [HttpPost("solicitar")]
-        public async Task<IActionResult> SolicitarReserva([FromBody] ReservaAula nuevaReserva)
+        public async Task<IActionResult> SolicitarReserva([FromBody] SolicitudAulaDto dto)
         {
-            // --- PARCHE ANTI-CRASH 1: Validar que el usuario exista ---
-            if (nuevaReserva.UsuarioId <= 0)
+            // Buscamos al maestro por su matrícula (PER-2026-001) o username
+            var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Matricula == dto.Matricula || u.Username == dto.Matricula);
+            
+            if (usuario == null)
             {
-                return BadRequest(new { mensaje = "❌ Error: No pudimos detectar tu ID de usuario. Por favor, cierra sesión y vuelve a entrar." });
+                return BadRequest(new { mensaje = $"❌ Error: No encontramos tu cuenta ({dto.Matricula}) en la base de datos." });
             }
 
-            // Validar que NO haya empalmes
             bool hayEmpalme = await _context.ReservasAula.AnyAsync(r =>
-                r.Fecha.Date == nuevaReserva.Fecha.Date &&
+                r.Fecha.Date == dto.Fecha.Date &&
                 r.Estatus != "Rechazada" &&
-                r.HoraInicio < nuevaReserva.HoraFin &&
-                r.HoraFin > nuevaReserva.HoraInicio
+                r.HoraInicio < dto.HoraFin &&
+                r.HoraFin > dto.HoraInicio
             );
 
             if (hayEmpalme)
             {
-                return BadRequest(new { mensaje = "❌ El horario seleccionado ya está ocupado o en proceso de revisión." });
+                return BadRequest(new { mensaje = "❌ El horario seleccionado ya está ocupado o en revisión." });
             }
 
-            nuevaReserva.Estatus = "Pendiente";
-            
-            // --- PARCHE ANTI-CRASH 2: Motivo por defecto por si las dudas ---
-            if (string.IsNullOrEmpty(nuevaReserva.Motivo))
+            var nuevaReserva = new ReservaAula
             {
-                nuevaReserva.Motivo = "Clase regular";
-            }
+                UsuarioId = usuario.Id,
+                Fecha = dto.Fecha,
+                HoraInicio = dto.HoraInicio,
+                HoraFin = dto.HoraFin,
+                Estatus = "Pendiente",
+                Motivo = string.IsNullOrEmpty(dto.Motivo) ? "Clase regular" : dto.Motivo
+            };
 
             _context.ReservasAula.Add(nuevaReserva);
-            await _context.SaveChangesAsync(); // <-- Aquí era donde explotaba
+            await _context.SaveChangesAsync();
 
             return Ok(new { mensaje = "✅ Solicitud enviada. Espera la confirmación en tu panel." });
         }
