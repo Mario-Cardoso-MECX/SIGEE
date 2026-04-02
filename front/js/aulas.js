@@ -1,10 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Evitar que pidan para días en el pasado
     const hoy = new Date().toISOString().split('T')[0];
     const txtFecha = document.getElementById('txtFechaReserva');
     if(txtFecha) txtFecha.setAttribute('min', hoy);
 
-    // Ocultar panel de petición a directivos
     const sesion = JSON.parse(localStorage.getItem('usuarioSesion')) || {};
     if (sesion.rol === 'Admin' || sesion.rol === 'Secretaria') {
         const panel = document.getElementById('panelSolicitud');
@@ -21,11 +19,15 @@ async function cargarReservas() {
     const esAdminOSecre = (rol === 'Admin' || rol === 'Secretaria');
     
     // ==========================================
-    // EL ESCUDO DEFINITIVO DE IDENTIDAD
-    // Buscamos el ID y la Matrícula sin importar cómo estén escritos en LocalStorage
+    // ESCUDO NIVEL DIOS (Triple validación + Limpiador de #)
     // ==========================================
-    const miUsuarioId = parseInt(sesion.id || sesion.Id || sesion.usuarioId || sesion.UsuarioId || sesion.idUsuario || sesion.IdUsuario || 0);
-    const miMatricula = (sesion.matricula || sesion.Matricula || sesion.username || sesion.Username || '').toString().trim().toLowerCase();
+    const miUsuarioId = parseInt(sesion.id || sesion.Id || sesion.usuarioId || sesion.UsuarioId || 0);
+    
+    // Limpiamos nuestra matrícula de cualquier símbolo # o espacios
+    const miMatricula = (sesion.matricula || sesion.Matricula || sesion.username || sesion.Username || '')
+                        .toString().replace('#', '').trim().toLowerCase();
+    
+    const miNombreCompleto = `${sesion.nombre || ''} ${sesion.apellidos || ''}`.trim().toLowerCase();
 
     try {
         const response = await fetch(`${API_URL}/Aulas/reservas`);
@@ -46,24 +48,31 @@ async function cargarReservas() {
 
             let acciones = '';
             
-            // Botones de Directiva
+            // Botones exclusivos de Directiva (Solo si está pendiente)
             if(esAdminOSecre && r.estatus === 'Pendiente') {
                 acciones += `<button onclick="aprobarReserva(${r.id})" style="background:#27ae60; color:white; border:none; padding:8px 12px; border-radius:5px; margin-right:5px; cursor:pointer;" title="Aprobar"><i class="fas fa-check"></i></button>`;
                 acciones += `<button onclick="rechazarReserva(${r.id})" style="background:#e74c3c; color:white; border:none; padding:8px 12px; border-radius:5px; margin-right:5px; cursor:pointer;" title="Rechazar"><i class="fas fa-times"></i></button>`;
             }
             
             // ==========================================
-            // LÓGICA INFALIBLE PARA MOSTRAR EL BASURERO
+            // LÓGICA DE CANCELACIÓN (Limpiando el símbolo # de la base de datos)
             // ==========================================
             const idReserva = parseInt(r.usuarioId || r.UsuarioId || 0);
-            const matriculaReserva = (r.matriculaProfesor || '').toString().trim().toLowerCase();
             
-            // ¿Es mía esta reserva? (Comprobamos por número ID Y por Matrícula de texto)
+            // Limpiamos la matrícula que viene de la reserva
+            const matriculaReserva = (r.matriculaProfesor || '')
+                                     .toString().replace('#', '').trim().toLowerCase();
+            
+            const nombreReserva = (r.nombreProfesor || '').toString().trim().toLowerCase();
+            
+            // ¿Es mi reserva? (Validación cruzada limpia)
             const esMiReserva = (miUsuarioId > 0 && idReserva === miUsuarioId) || 
-                                (miMatricula !== '' && matriculaReserva === miMatricula);
+                                (miMatricula !== '' && matriculaReserva === miMatricula) ||
+                                (miNombreCompleto !== '' && nombreReserva === miNombreCompleto);
 
+            // El dueño o los directivos pueden cancelar
             if(esAdminOSecre || esMiReserva) {
-                acciones += `<button onclick="cancelarReserva(${r.id})" style="background:#7f8c8d; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer;" title="Eliminar/Cancelar"><i class="fas fa-trash"></i></button>`;
+                acciones += `<button onclick="cancelarReserva(${r.id})" style="background:#7f8c8d; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer;" title="Eliminar/Cancelar Mi Reserva"><i class="fas fa-trash"></i></button>`;
             }
 
             const horaInicio = r.horaInicio.substring(0,5);
@@ -93,9 +102,9 @@ async function solicitarReserva() {
     const motivo = document.getElementById('txtMotivo').value;
     
     const sesion = JSON.parse(localStorage.getItem('usuarioSesion')) || {};
-    const miMatricula = sesion.matricula || sesion.Matricula || sesion.username || sesion.Username;
+    const miMatriculaRaw = sesion.matricula || sesion.Matricula || sesion.username || sesion.Username;
 
-    if (!miMatricula) {
+    if (!miMatriculaRaw) {
         Swal.fire('Sesión no detectada', 'No pudimos detectar tu matrícula. Cierra sesión y vuelve a entrar.', 'error');
         return;
     }
@@ -112,7 +121,7 @@ async function solicitarReserva() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                Matricula: miMatricula, 
+                Matricula: miMatriculaRaw, 
                 Fecha: fecha,
                 HoraInicio: hInicio,
                 HoraFin: hFin,
@@ -180,7 +189,7 @@ async function rechazarReserva(id) {
 async function cancelarReserva(id) {
     const confirmacion = await Swal.fire({
         title: '¿Eliminar Reserva?',
-        text: "Se borrará del calendario permanentemente.",
+        text: "Esta acción liberará el aula para otros profesores.",
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#e74c3c'

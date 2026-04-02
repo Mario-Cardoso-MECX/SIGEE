@@ -16,7 +16,7 @@ namespace GestorInventarioPrimaria.Controllers
             _context = context;
         }
 
-        // 1. Obtener todas las reservas
+        // 1. Obtener todas las reservas (Actualizado para enviar TODO)
         [HttpGet("reservas")]
         public async Task<ActionResult<IEnumerable<object>>> GetReservas()
         {
@@ -26,14 +26,15 @@ namespace GestorInventarioPrimaria.Controllers
                 .ThenBy(r => r.HoraInicio)
                 .ToListAsync();
 
+            // Aquí está el cambio clave: Aseguramos que usuarioId y matricula se envíen
             var resultado = reservas.Select(r => new {
                 id = r.Id,
-                usuarioId = r.UsuarioId, // MAGIA: Devolvemos el ID real numérico
+                usuarioId = r.UsuarioId, // <--- OBLIGATORIO PARA EL BOTÓN
                 matriculaProfesor = r.Usuario != null ? (r.Usuario.Matricula ?? r.Usuario.Username) : "",
                 nombreProfesor = r.Usuario != null ? $"{r.Usuario.Nombre} {r.Usuario.Apellidos}" : "Usuario Borrado",
                 fecha = r.Fecha.ToString("yyyy-MM-dd"),
-                horaInicio = r.HoraInicio.ToString(@"hh\:mm\:ss"),
-                horaFin = r.HoraFin.ToString(@"hh\:mm\:ss"),
+                horaInicio = r.HoraInicio.ToString(@"hh\:mm"),
+                horaFin = r.HoraFin.ToString(@"hh\:mm"),
                 estatus = r.Estatus,
                 motivo = r.Motivo
             });
@@ -50,7 +51,7 @@ namespace GestorInventarioPrimaria.Controllers
             public string Motivo { get; set; } = "";
         }
 
-        // 2. Solicitar un horario
+        // 2. Solicitar un horario (Mantenemos tu validación de empalmes)
         [HttpPost("solicitar")]
         public async Task<IActionResult> SolicitarReserva([FromBody] SolicitudAulaDto dto)
         {
@@ -89,13 +90,14 @@ namespace GestorInventarioPrimaria.Controllers
             return Ok(new { mensaje = "✅ Solicitud enviada. Espera la confirmación en tu panel." });
         }
 
-        // 3. Aprobar Reserva
+        // 3. Aprobar Reserva (Mantenemos tu lógica de rechazar choques automáticamente)
         [HttpPut("aprobar/{id}")]
         public async Task<IActionResult> AprobarReserva(int id)
         {
             var reserva = await _context.ReservasAula.FindAsync(id);
             if (reserva == null) return NotFound(new { mensaje = "Reserva no encontrada." });
 
+            // Rechazar automáticamente otras reservas pendientes que choquen
             var empalmadas = await _context.ReservasAula.Where(r =>
                 r.Id != id &&
                 r.Fecha.Date == reserva.Fecha.Date &&
