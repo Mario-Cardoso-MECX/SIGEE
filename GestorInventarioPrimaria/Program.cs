@@ -1,7 +1,7 @@
 using GestorInventarioPrimaria.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders; // <-- NECESARIO PARA LAS RUTAS DE ARCHIVOS
-using System.IO; 
+using System.IO;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -25,6 +25,7 @@ if (Directory.Exists(@"C:\SIGE") && builder.Environment.EnvironmentName != "Deve
 // CONEXIÓN A BASE DE DATOS 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(cadenaConexion));
+
 // ------------------------------------------------
 
 builder.Services.AddCors(options =>
@@ -52,9 +53,14 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 // --- CONFIGURACIÓN PARA ARCHIVOS ESTÁTICOS (LAS FOTOS Y EL FRONTEND) ---
-app.UseDefaultFiles(); 
 
-// CORRECCIÓN: Le enseñamos a Program.cs a dar "un paso atrás" igual que el controlador
+// CORRECCIÓN PARA EL ERROR 404: Le decimos explícitamente que arranque con login.html
+DefaultFilesOptions options = new DefaultFilesOptions();
+options.DefaultFileNames.Clear();
+options.DefaultFileNames.Add("login.html");
+app.UseDefaultFiles(options); 
+
+// Le enseñamos a Program.cs a dar "un paso atrás" igual que el controlador
 string rutaFront = Path.Combine(builder.Environment.ContentRootPath, "front");
 string rutaHermano = Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, "..", "front"));
 
@@ -84,9 +90,6 @@ else
 // --------------------------------------------------
 
 app.UseCors("PermitirTodo");
-
 app.UseAuthorization();
-
 app.MapControllers();
-
 app.Run();
