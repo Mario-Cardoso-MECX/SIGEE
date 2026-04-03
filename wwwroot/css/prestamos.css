@@ -237,35 +237,38 @@ tbody tr:hover { background-color: #fff7ed; } /* Hover cálido para préstamos *
     .panel-control { grid-template-columns: 1fr; }
 }
 
-/* --- MAGIA RESPONSIVA (AGREGADO) --- */
+/* --- MAGIA RESPONSIVA PRESTAMOS (Corregida) --- */
 @media (max-width: 768px) {
     .form-padding { padding: 15px; }
     .card-header h2 { font-size: 1.1rem; }
     
-    /* SOLUCIÓN AL DESBORDE: Obligamos a los paneles de control a no exceder el 100% 
-       de su contenedor padre, evitando que se salgan hacia la derecha. */
+    /* El culpable era que los items intentaban rebasar la pantalla.
+       Cambiamos a flex para dominar el 100% absoluto */
     .panel-control {
-        width: 100%;
-        max-width: 100%;
-        box-sizing: border-box;
+        display: flex !important;
+        flex-direction: column !important;
+        width: 100% !important;
+        max-width: 100% !important; /* Fuerza a no desbordar */
+        box-sizing: border-box !important;
+        overflow: hidden; /* Cortamos cualquier desborde fantasma */
     }
     
-    /* Aplicamos box-sizing a las cards individuales para que el padding 
-       se sume hacia adentro y no hacia afuera */
-    .panel-control .card-accion {
-        width: 100%;
-        box-sizing: border-box;
-        margin-bottom: 20px; /* Separación vertical entre paneles */
+    /* Aseguramos que TODAS las tarjetas respeten el ancho de la pantalla */
+    .card-accion {
+        width: 100% !important;
+        max-width: 100% !important; /* Evita que crezcan hacia los lados */
+        box-sizing: border-box !important;
     }
-}
 
-/* Scroll para que la tabla no se aplaste */
-.tabla-container {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    width: 100%; /* Asegura que tome todo el ancho del contenedor */
-}
-
-table {
-    min-width: 800px;
+    /* Activamos finalmente el scroll para la tablita rebelde de devoluciones */
+    .tabla-container {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+        width: 100% !important;
+        max-width: 100% !important; /* Mantiene la tabla dentro de la tarjeta */
+    }
+    
+    table {
+        min-width: 800px !important;
+    }
 }
