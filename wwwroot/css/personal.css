@@ -289,7 +289,7 @@ td button {
 .btn-borrar-rojo { background-color: #e74c3c !important; }
 .btn-borrar-rojo:hover { background-color: #c0392b !important; }
 
-/* --- MAGIA RESPONSIVA (AGREGADO) --- */
+/* --- MAGIA RESPONSIVA (CELULARES) --- */
 @media (max-width: 768px) {
     .form-grid-modal {
         grid-template-columns: 1fr;
@@ -302,12 +302,29 @@ td button {
         width: 100%;
         justify-content: center;
     }
+    
+    /* CORRECCIÓN: TÍTULO Y BOTÓN DE REGISTRO EN CELULAR */
+    /* Asumiendo que el h2 y el btn-registrar están envueltos en un contenedor flex (como en el header de la card) */
+    .card-accion > div[style*="display: flex"] {
+        flex-direction: column !important; /* Los apila uno sobre otro */
+        gap: 15px !important;
+        align-items: center !important; /* Centra ambos elementos */
+        padding-bottom: 10px !important;
+    }
+
+    .card-accion h2 {
+        font-size: 1.2rem !important; /* Ajusta el tamaño para que no se vea grosero */
+        text-align: center !important;
+        margin: 0 !important;
+    }
+
     .btn-registrar {
-        width: 100%;
-        justify-content: center;
-        margin-bottom: 15px;
+        width: 100% !important; /* El botón ocupa todo el ancho inferior */
+        justify-content: center !important;
+        margin: 0 !important;
     }
 }
+
 /* Scroll horizontal para la tabla en móviles */
 .tabla-container {
     overflow-x: auto;
