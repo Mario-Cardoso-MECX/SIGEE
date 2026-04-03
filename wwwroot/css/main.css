@@ -208,15 +208,52 @@
         padding: 15px; /* Menos padding en celular */
     }
 
-    .btn-menu-mobile {
-        display: block; /* Muestra el botón de 3 rayitas */
-    }
-
     .sidebar-overlay.active {
         display: block; /* Muestra el fondo oscuro */
     }
 
+    /* --- REESTRUCTURACIÓN TOP BAR CELULAR --- */
     .top-bar {
         padding: 15px;
+        flex-wrap: wrap; /* Permitimos que baje a una 2da línea */
+        justify-content: flex-start; /* Todo alineado a la izquierda por defecto */
+        align-items: center;
+    }
+
+    /* 1. Botón hamburguesa: se queda a la izquierda */
+    .btn-menu-mobile {
+        display: block;
+        margin: 0 15px 0 0;
+    }
+
+    /* 2. Título (Ej: Dashboard): Lo ponemos a lado del botón pero centrado en el resto del espacio */
+    .header-title {
+        flex-grow: 1; /* Toma el espacio que sobra a la derecha del botón */
+        display: flex;
+        justify-content: center; /* Centra el texto en ese espacio sobrante */
+    }
+
+    .header-title h1 {
+        font-size: 1.3rem;
+    }
+
+    /* 3. Usuario: Obligado a bajar a una 2da línea debajo del botón y título */
+    .user-badge {
+        width: 100%; /* Toma todo el ancho para forzar la bajada */
+        display: flex;
+        justify-content: center; /* Centrado absoluto */
+        align-items: center;
+        gap: 8px;
+        margin-top: 15px;
+        padding-top: 15px;
+        border-top: 1px solid #e2e8f0; /* Linea separadora */
+    }
+
+    .user-badge span {
+        font-size: 0.95rem;
+        max-width: 250px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 }
