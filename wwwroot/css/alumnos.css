@@ -215,8 +215,21 @@ td button {
 .btn-borrar-rojo { background-color: #e74c3c !important; } 
 .btn-borrar-rojo:hover { background-color: #c0392b !important; }
 
+/* --- MAGIA RESPONSIVA ALUMNOS --- */
 @media (max-width: 768px) {
     .form-grid {
         grid-template-columns: 1fr;
+    }
+    
+    /* El culpable de aplastar los botones era table-layout: fixed. Lo anulamos: */
+    table {
+        table-layout: auto !important; 
+        min-width: 900px !important; /* Forzamos tamaño grande para activar el scroll */
+    }
+    
+    .tabla-container {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+        width: 100%;
     }
 }

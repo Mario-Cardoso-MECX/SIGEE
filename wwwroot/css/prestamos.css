@@ -241,12 +241,31 @@ tbody tr:hover { background-color: #fff7ed; } /* Hover cálido para préstamos *
 @media (max-width: 768px) {
     .form-padding { padding: 15px; }
     .card-header h2 { font-size: 1.1rem; }
+    
+    /* SOLUCIÓN AL DESBORDE: Obligamos a los paneles de control a no exceder el 100% 
+       de su contenedor padre, evitando que se salgan hacia la derecha. */
+    .panel-control {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+    
+    /* Aplicamos box-sizing a las cards individuales para que el padding 
+       se sume hacia adentro y no hacia afuera */
+    .panel-control .card-accion {
+        width: 100%;
+        box-sizing: border-box;
+        margin-bottom: 20px; /* Separación vertical entre paneles */
+    }
 }
+
 /* Scroll para que la tabla no se aplaste */
 .tabla-container {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+    width: 100%; /* Asegura que tome todo el ancho del contenedor */
 }
+
 table {
     min-width: 800px;
 }
