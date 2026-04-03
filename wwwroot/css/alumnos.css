@@ -75,14 +75,12 @@
     outline: none;
 }
 
-/* SOLUCIÓN: Botón verde grande SOLO para el formulario */
 #formNuevoAlumno .btn-verde {
     width: calc(100% - 50px);
     margin: 0 25px 25px 25px;
     padding: 15px;
 }
 
-/* SOLUCIÓN: Botón verde general de tamaño normal (como el de Excel) */
 .btn-verde {
     background-color: var(--verde-alegre);
     color: white;
@@ -99,7 +97,7 @@
     background-color: var(--verde-hover);
 }
 
-/* Buscador */
+/* Buscador (DISEÑO ORIGINAL DE PC) */
 .search-container {
     margin-bottom: 25px;
 }
@@ -122,7 +120,7 @@
     border-color: var(--azul-claro);
 }
 
-/* --- TABLA DE ALUMNOS CON SCROLL INTERNO --- */
+/* --- TABLA --- */
 .tabla-container {
     background: white;
     border-radius: 12px;
@@ -138,11 +136,10 @@ table {
     table-layout: fixed;
 }
 
-/* SOLUCIÓN: Repartir el ancho para que quepan los 5 botones sin aplastarse */
-th:nth-child(1) { width: 15%; } /* Matrícula */
-th:nth-child(2) { width: 35%; } /* Nombre Completo */
-th:nth-child(3) { width: 15%; } /* Grupo */
-th:nth-child(4) { width: 35%; } /* Acciones (Mucho espacio) */
+th:nth-child(1) { width: 15%; }
+th:nth-child(2) { width: 35%; }
+th:nth-child(3) { width: 15%; }
+th:nth-child(4) { width: 35%; }
 
 thead th {
     position: sticky;
@@ -165,7 +162,6 @@ td {
     text-overflow: ellipsis;   
 }
 
-/* SOLUCIÓN: Evitar que los botones de la última columna se corten o desaparezcan */
 td:last-child {
     white-space: normal;
     overflow: visible;
@@ -185,16 +181,14 @@ tbody tr:hover {
     text-align: center;
 }
 
-/* --- ESTILOS MEJORADOS PARA BOTONES DE ACCIÓN --- */
 .acciones-flex {
     display: flex;
     justify-content: center;
     gap: 8px;
     align-items: center;
-    flex-wrap: wrap; /* Si la pantalla es pequeña, se acomodan en 2 líneas */
+    flex-wrap: wrap;
 }
 
-/* Ajuste general para botones dentro de celdas */
 td button {
     width: auto !important; 
     padding: 8px 12px !important;
@@ -205,7 +199,6 @@ td button {
     transition: 0.3s;
 }
 
-/* Colores vibrantes */
 .btn-historial { background-color: #3498db !important; } 
 .btn-historial:hover { background-color: #2980b9 !important; }
 
@@ -215,21 +208,57 @@ td button {
 .btn-borrar-rojo { background-color: #e74c3c !important; } 
 .btn-borrar-rojo:hover { background-color: #c0392b !important; }
 
-/* --- MAGIA RESPONSIVA ALUMNOS --- */
+/* =========================================
+   🔥 RESPONSIVE: MAGIA SOLO PARA CELULAR 🔥
+   ========================================= */
 @media (max-width: 768px) {
     .form-grid {
         grid-template-columns: 1fr;
     }
-    
-    /* El culpable de aplastar los botones era table-layout: fixed. Lo anulamos: */
+
     table {
         table-layout: auto !important; 
-        min-width: 900px !important; /* Forzamos tamaño grande para activar el scroll */
+        min-width: 900px !important;
     }
-    
+
     .tabla-container {
         overflow-x: auto !important;
         -webkit-overflow-scrolling: touch;
         width: 100%;
+    }
+
+    /* Tu solución de Grid aplicada EXCLUSIVAMENTE a móviles */
+    .search-container > div {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 15px;
+        width: 100%;
+    }
+
+    /* Buscador ocupa todo */
+    .search-container .input-wrapper {
+        grid-column: 1 / -1 !important;
+        position: relative;
+        display: flex;
+        align-items: center;
+        width: 100% !important;
+    }
+
+    /* Selects mitad y mitad */
+    #selFiltroGrado,
+    #selFiltroLetra {
+        width: 100% !important;
+    }
+
+    /* BOTONES EN GRID 2x2 */
+    .search-container > div:last-child {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 15px;
+    }
+
+    /* Botones ocupan su celda */
+    .search-container button {
+        width: 100% !important;
     }
 }
