@@ -242,33 +242,47 @@ tbody tr:hover { background-color: #fff7ed; } /* Hover cálido para préstamos *
     .form-padding { padding: 15px; }
     .card-header h2 { font-size: 1.1rem; }
     
-    /* El culpable era que los items intentaban rebasar la pantalla.
-       Cambiamos a flex para dominar el 100% absoluto */
     .panel-control {
         display: flex !important;
         flex-direction: column !important;
         width: 100% !important;
-        max-width: 100% !important; /* Fuerza a no desbordar */
+        max-width: 100% !important;
         box-sizing: border-box !important;
-        overflow: hidden; /* Cortamos cualquier desborde fantasma */
+        overflow: hidden; 
     }
     
-    /* Aseguramos que TODAS las tarjetas respeten el ancho de la pantalla */
     .card-accion {
         width: 100% !important;
-        max-width: 100% !important; /* Evita que crezcan hacia los lados */
+        max-width: 100% !important; 
         box-sizing: border-box !important;
     }
 
-    /* Activamos finalmente el scroll para la tablita rebelde de devoluciones */
     .tabla-container {
         overflow-x: auto !important;
         -webkit-overflow-scrolling: touch;
         width: 100% !important;
-        max-width: 100% !important; /* Mantiene la tabla dentro de la tarjeta */
+        max-width: 100% !important; 
     }
     
     table {
         min-width: 800px !important;
+    }
+
+    /* 🔥 NUEVO AJUSTE: BOTONES DE FILTRO EN UNA SOLA LÍNEA 🔥 */
+    /* Aplicamos el flex directamente al contenedor .filter-bar-orange */
+    .filter-bar-orange {
+        display: flex !important;
+        flex-wrap: nowrap !important; /* Fuerza a quedarse en una sola línea */
+        overflow-x: auto !important;  /* Activa scroll horizontal */
+        -webkit-overflow-scrolling: touch; /* Scroll fluido en celulares */
+        align-items: center !important;
+        gap: 10px !important;
+        padding-bottom: 10px !important; /* Espacio para que la barra de scroll no estorbe */
+    }
+
+    /* Forzamos a TODOS los elementos (texto "Filtrar" y los chips) a no achicarse ni romperse */
+    .filter-bar-orange > * {
+        white-space: nowrap !important;
+        flex-shrink: 0 !important;
     }
 }
