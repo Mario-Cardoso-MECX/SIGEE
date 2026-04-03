@@ -288,3 +288,31 @@ td button {
 
 .btn-borrar-rojo { background-color: #e74c3c !important; }
 .btn-borrar-rojo:hover { background-color: #c0392b !important; }
+
+/* --- MAGIA RESPONSIVA (AGREGADO) --- */
+@media (max-width: 768px) {
+    .form-grid-modal {
+        grid-template-columns: 1fr;
+    }
+    .modal-actions {
+        flex-direction: column;
+        text-align: center;
+    }
+    .btn-cancelar, .btn-guardar-azul {
+        width: 100%;
+        justify-content: center;
+    }
+    .btn-registrar {
+        width: 100%;
+        justify-content: center;
+        margin-bottom: 15px;
+    }
+}
+/* Scroll horizontal para la tabla en móviles */
+.tabla-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+.tabla-compacta {
+    min-width: 800px;
+}

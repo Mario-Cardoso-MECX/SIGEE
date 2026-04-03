@@ -14,6 +14,8 @@
 .dashboard-wrapper {
     display: flex;
     min-height: 100vh;
+    width: 100%;
+    overflow-x: hidden; /* Evita que la pantalla baile hacia los lados en celular */
 }
 
 /* Estructura del Sidebar */
@@ -24,9 +26,12 @@
     display: flex;
     flex-direction: column;
     height: 100vh;
-    position: sticky;
+    /* Cambiamos de sticky a fixed para que flote en celulares */
+    position: fixed; 
     top: 0;
-    transition: all 0.3s ease;
+    left: 0;
+    z-index: 1000;
+    transition: transform 0.3s ease;
     /* Sombra más sutil para colores claros */
     box-shadow: 2px 0 15px rgba(0, 123, 255, 0.2);
 }
@@ -37,44 +42,48 @@
     display: flex;
     align-items: center;
     gap: 15px;
-    font-size: 1.2rem;
-    font-weight: bold;
-    /* Línea divisoria blanca semi-transparente */
     border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    margin-bottom: 20px;
 }
 
 .sidebar-header i {
-    font-size: 1.8rem;
-    color: #ffffff;
-    filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.2));
+    font-size: 2rem;
+    color: white; /* Blanco para destacar en el azul */
 }
 
-/* Navegación */
+.sidebar-header span {
+    font-size: 1.2rem;
+    font-weight: 800; /* Letra más gordita */
+    line-height: 1.2;
+}
+
+/* Menú de Navegación */
 .menu {
-    flex-grow: 1; 
-    padding: 20px 0;
     display: flex;
     flex-direction: column;
+    flex-grow: 1; /* Empuja el footer hacia abajo */
     gap: 5px;
 }
 
 .menu a {
     text-decoration: none;
-    /* Texto en blanco suave para que no canse la vista */
-    color: rgba(255, 255, 255, 0.85);
-    padding: 15px 25px;
+    color: rgba(255, 255, 255, 0.8); /* Blanco ligeramente transparente para no cansar la vista */
+    padding: 15px 20px;
+    font-size: 1.05rem;
+    font-weight: 500;
     display: flex;
     align-items: center;
-    gap: 12px;
-    font-size: 1rem;
-    transition: all 0.2s ease;
-    border-left: 5px solid transparent;
+    gap: 15px;
+    transition: all 0.3s ease;
+    border-left: 4px solid transparent;
 }
 
 .menu a i {
-    width: 20px;
+    font-size: 1.2rem;
+    width: 25px;
     text-align: center;
-    font-size: 1.1rem;
+    color: rgba(255, 255, 255, 0.7); /* Iconos un poco más apagados que el texto */
+    transition: color 0.3s;
 }
 
 /* Estado Hover */
@@ -112,31 +121,102 @@
     padding: 12px;
     border-radius: 8px;
     cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
+    font-size: 1rem;
     font-weight: 600;
     transition: all 0.3s ease;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
 }
 
 .btn-logout:hover {
-    background: #ff4d4d; /* Rojo sólido al pasar el mouse */
-    border-color: #ff4d4d;
-    color: white;
+    background: #e74c3c; /* Al pasar el mouse sí se pone rojo alerta */
+    border-color: #e74c3c;
 }
 
-/* Responsividad básica */
+/* Contenido Principal */
+.main-content {
+    flex-grow: 1;
+    margin-left: var(--sidebar-width); /* Respeta el espacio del menú en PC */
+    width: calc(100% - var(--sidebar-width));
+    padding: 30px;
+    background-color: #f4f7f6; /* Gris muy clarito para que resalten las tarjetas blancas */
+    transition: margin-left 0.3s ease, width 0.3s ease;
+}
+
+/* Top Bar (Encabezado superior blanco) */
+.top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: white;
+    padding: 15px 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); /* Sombra súper suave */
+    margin-bottom: 30px;
+}
+
+.header-title h1 {
+    font-size: 1.5rem;
+    color: #1e293b;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.header-title h1 i {
+    color: var(--sidebar-bg); /* Usa el azul del menú para el ícono del título */
+}
+
+/* --- ESTILOS NUEVOS PARA EL BOTÓN HAMBURGUESA --- */
+.btn-menu-mobile {
+    display: none;
+    background: none;
+    border: none;
+    font-size: 1.8rem;
+    color: var(--sidebar-bg);
+    cursor: pointer;
+    margin-right: 15px;
+}
+
+.sidebar-overlay {
+    position: fixed;
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 999;
+    display: none;
+}
+
+/* --- MAGIA RESPONSIVA (CELULARES Y TABLETS PEQUEÑAS) --- */
 @media (max-width: 768px) {
     .sidebar {
-        width: 80px;
+        transform: translateX(-100%); /* Oculta el menú a la izquierda */
     }
-    .sidebar-header span, .menu a span, .sidebar-footer span {
-        display: none;
+    
+    .sidebar.open {
+        transform: translateX(0); /* Lo muestra cuando tiene la clase open */
     }
-    .menu a {
-        justify-content: center;
-        padding: 15px 0;
-        border-left: none;
+
+    .main-content {
+        margin-left: 0; /* Ya no empuja el contenido */
+        width: 100%;
+        padding: 15px; /* Menos padding en celular */
+    }
+
+    .btn-menu-mobile {
+        display: block; /* Muestra el botón de 3 rayitas */
+    }
+
+    .sidebar-overlay.active {
+        display: block; /* Muestra el fondo oscuro */
+    }
+
+    .top-bar {
+        padding: 15px;
     }
 }

@@ -6,9 +6,16 @@ function construirInterfaz() {
     const wrapper = document.querySelector('.dashboard-wrapper');
     if (!wrapper) return;
 
-    // 1. Inyectar Sidebar
+    // 1. INYECTAR OVERLAY OSCURO (Para celulares)
+    const overlay = document.createElement('div');
+    overlay.className = 'sidebar-overlay';
+    overlay.id = 'sidebarOverlay';
+    wrapper.insertBefore(overlay, wrapper.firstChild);
+
+    // 2. INYECTAR SIDEBAR
     const sidebar = document.createElement('aside');
     sidebar.className = 'sidebar';
+    sidebar.id = 'mainSidebar'; // ID necesario para el móvil
     sidebar.innerHTML = `
         <div class="sidebar-header">
             <i class="fas fa-school"></i>
@@ -26,54 +33,88 @@ function construirInterfaz() {
         </nav>
         <div class="sidebar-footer">
             <button onclick="cerrarSesion()" class="btn-logout">
-                <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+                <i class="fas fa-sign-out-alt"></i> Salir
             </button>
         </div>
     `;
+    wrapper.insertBefore(sidebar, wrapper.children[1]); // Lo inserta después del overlay
 
-    // Insertar el sidebar al inicio del wrapper
-    wrapper.prepend(sidebar);
+    // 3. INYECTAR BOTÓN HAMBURGUESA Y LOGICA DE CELULAR
+    setTimeout(() => {
+        const headerTitle = document.querySelector('.header-title h1');
+        if (headerTitle && !document.getElementById('btnMenuToggle')) {
+            // Creamos el botón
+            const btnMenu = document.createElement('button');
+            btnMenu.className = 'btn-menu-mobile';
+            btnMenu.id = 'btnMenuToggle';
+            btnMenu.innerHTML = '<i class="fas fa-bars"></i>';
+            
+            // Lo insertamos justo antes del título H1
+            headerTitle.parentNode.insertBefore(btnMenu, headerTitle);
 
-    // 2. Marcar la página activa
-    const path = window.location.pathname;
-    const pagina = path.split("/").pop();
-    
-    if (pagina.includes('dashboard')) { const e = document.getElementById('nav-inicio'); if(e) e.classList.add('active'); }
-    if (pagina.includes('alumnos')) { const e = document.getElementById('nav-alumnos'); if(e) e.classList.add('active'); }
-    if (pagina.includes('materiales')) { const e = document.getElementById('nav-materiales'); if(e) e.classList.add('active'); }
-    if (pagina.includes('prestamos')) { const e = document.getElementById('nav-prestamos'); if(e) e.classList.add('active'); }
-    if (pagina.includes('aulas')) { const e = document.getElementById('nav-aulas'); if(e) e.classList.add('active'); }
-    if (pagina.includes('personal')) { const e = document.getElementById('nav-personal'); if(e) e.classList.add('active'); }
+            // Logica de clics
+            btnMenu.addEventListener('click', () => {
+                sidebar.classList.add('open');
+                overlay.classList.add('active');
+            });
+
+            overlay.addEventListener('click', () => {
+                sidebar.classList.remove('open');
+                overlay.classList.remove('active');
+            });
+        }
+    }, 100);
+
+    // 4. Marcar Pestaña Activa
+    const currentPage = window.location.pathname.split("/").pop() || "dashboard.html";
+    const navMap = {
+        "dashboard.html": "nav-inicio",
+        "alumnos.html": "nav-alumnos",
+        "materiales.html": "nav-materiales",
+        "prestamos.html": "nav-prestamos",
+        "aulas.html": "nav-aulas",
+        "personal.html": "nav-personal"
+    };
+
+    const activeId = navMap[currentPage];
+    if (activeId) {
+        const activeLink = sidebar.querySelector(`#${activeId}`);
+        if (activeLink) activeLink.classList.add('active');
+    }
 }
 
-// --- FUNCIÓN GLOBAL PARA EXPORTAR TABLAS A EXCEL ---
-// NUEVO: Agregamos parámetro 'soloVisibles' con valor por defecto false
-function exportarTablaExcel(idTabla, nombreArchivo, soloVisibles = false) {
-    const tablaOriginal = document.getElementById(idTabla);
-    if (!tablaOriginal) {
-        Swal.fire('Error', 'No se encontró la tabla para exportar.', 'error');
+// Lógica de cerrar sesión (Sin cambios)
+function cerrarSesion() {
+    localStorage.removeItem('usuarioSesion');
+    window.location.href = "login.html";
+}
+
+
+// --- LÓGICA REUTILIZABLE PARA EXPORTAR TABLAS A EXCEL ---
+function exportarExcel(idTabla, nombreArchivo) {
+    // 1. Obtenemos la tabla por su ID
+    const tabla = document.getElementById(idTabla);
+    if (!tabla) {
+        console.error("No se encontró la tabla para exportar.");
         return;
     }
 
-    // 1. Clonamos la tabla en memoria para no afectar lo que ve el usuario
-    const tablaClonada = tablaOriginal.cloneNode(true);
+    // 2. Clonamos la tabla para limpiarla antes de exportar
+    // (Para no alterar la vista del usuario)
+    const tablaClonada = tabla.cloneNode(true);
 
-    // 2. Eliminamos la última columna ("Acciones") para que el Excel salga limpio
-    const filas = tablaClonada.querySelectorAll('tr');
+    // Encontrar todas las filas
+    const filas = tablaClonada.querySelectorAll("tr");
+    
     filas.forEach(fila => {
-        // Si el usuario eligió "Solo Filtrados" y la fila está oculta por el buscador/filtro, la borramos del Excel
-        if (soloVisibles && fila.style.display === 'none') {
-            fila.parentNode.removeChild(fila);
-            return; // Saltamos a la siguiente
-        }
-
-        // Eliminamos la última columna ("Acciones")
-        if (fila.children.length > 0) {
+        // En tu tabla, asumiendo que la columna "Acciones" es la última
+        // la eliminamos para que no salga en el Excel
+        if (fila.lastElementChild) {
             fila.removeChild(fila.lastElementChild);
         }
     });
 
-    // 3. Convertimos la tabla a un libro de Excel usando SheetJS
+    // 3. Convertimos la tabla clonada a un formato de Excel usando SheetJS
     // raw: true evita que Excel convierta "2026-001" en fechas raras
     const wb = XLSX.utils.table_to_book(tablaClonada, { sheet: "Reporte", raw: true });
     
@@ -105,9 +146,11 @@ document.addEventListener('DOMContentLoaded', () => {
         btnExcelAlumnos.style.display = 'none';
     }
 
-    // Pantalla de Materiales/Inventario: Solo Admin e Inventario
-    const btnExcelMateriales = document.getElementById('btnExportarExcelMat');
-    if (btnExcelMateriales && rol !== 'Admin' && rol !== 'Inventario') {
-        btnExcelMateriales.style.display = 'none';
+    // Pantalla de Personal: Solo Admin
+    const btnExcelPersonal = document.getElementById('btnExportarPersonal');
+    if (btnExcelPersonal && rol !== 'Admin') {
+        btnExcelPersonal.style.display = 'none';
     }
+
+    // Pantalla de Inventario/Materiales: Todos pueden exportar (No ocultamos nada)
 });

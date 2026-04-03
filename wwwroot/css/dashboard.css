@@ -108,8 +108,15 @@
     width: 100%;
 }
 
+/* --- MAGIA RESPONSIVA (AGREGADO Y MEJORADO) --- */
 @media (max-width: 768px) {
-    .charts-grid {
+    .charts-grid, .dashboard-grid {
         grid-template-columns: 1fr;
+    }
+    .card {
+        padding: 20px;
+    }
+    .canvas-container {
+        height: 250px;
     }
 }

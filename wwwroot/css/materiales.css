@@ -278,7 +278,7 @@ td button {
 .btn-borrar-rojo { background-color: #e74c3c !important; }
 .btn-borrar-rojo:hover { background-color: #c0392b !important; }
 
-/* --- TABLA CON SCROLL INTERNO (AQUÍ ESTÁ LA MAGIA) --- */
+/* --- TABLA CON SCROLL INTERNO --- */
 .tabla-container {
     max-height: 60vh; /* Controla la altura de la caja (60% de la pantalla) */
     overflow-y: auto; /* Muestra el scroll interno solo si es necesario */
@@ -297,9 +297,23 @@ td button {
     box-shadow: 0 2px 5px rgba(0,0,0,0.2); 
 }
 
-/* Responsive */
+/* --- MAGIA RESPONSIVA (AGREGADO Y MEJORADO) --- */
 @media (max-width: 768px) {
     .button-group {
         flex-direction: column;
     }
+    .btn-verde, .btn-cancelar {
+        width: 100%;
+    }
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+}
+/* Evita que la tabla se aplaste en celulares */
+.tabla-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+.tabla-compacta {
+    min-width: 800px;
 }
