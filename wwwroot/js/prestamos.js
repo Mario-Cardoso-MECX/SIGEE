@@ -75,13 +75,34 @@ async function cargarAlumno(matriculaOpcional = null) {
 }
 
 async function realizarPrestamo() {
-    const materialId = document.getElementById('txtMaterialId').value;
+    const materialIdInput = document.getElementById('txtMaterialId');
+    const materialId = materialIdInput.value;
     const msgDiv = document.getElementById('msgPrestamo');
     const inputNombreMat = document.getElementById('txtBusquedaMaterial');
 
     if (!materialId) {
         return Swal.fire('Atención', 'Por favor, selecciona un material de la lista', 'info');
     }
+
+    // --- REQ-10 Validación de Credencial (Solo para Deportes) ---
+    const categoriaSeleccionada = materialIdInput.dataset.categoria;
+    if (categoriaSeleccionada === "Material Deportivo") {
+        const confirmCredencial = await Swal.fire({
+            title: '¡Garantía Requerida!',
+            text: '¿El alumno ya entregó su credencial física?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#27ae60',
+            cancelButtonColor: '#e74c3c',
+            confirmButtonText: '<i class="fas fa-id-card"></i> Sí, ya la tengo',
+            cancelButtonText: 'Aún no'
+        });
+
+        if (!confirmCredencial.isConfirmed) {
+            return; // Se cancela el préstamo si dicen que "Aún no"
+        }
+    }
+    // ----------------------------------------------------------------------
 
     msgDiv.innerText = "Procesando...";
     msgDiv.style.color = "blue";
@@ -108,6 +129,7 @@ async function realizarPrestamo() {
 
         if (response.ok) {
             document.getElementById('txtMaterialId').value = "";
+            document.getElementById('txtMaterialId').dataset.categoria = ""; // Limpiar data
             if(inputNombreMat) inputNombreMat.value = "";
             msgDiv.innerText = ""; 
             
@@ -138,7 +160,7 @@ async function realizarPrestamo() {
 async function devolverMaterial(idReserva) {
     const confirmacion = await Swal.fire({
         title: '¿Confirmar devolución?',
-        text: "El material será devuelto y el stock volverá a estar disponible.",
+        text: "El stock volverá a estar disponible. ¡NO OLVIDES DEVOLVER SU CREDENCIAL!", // REQ-11
         icon: 'question',
         showCancelButton: true,
         confirmButtonColor: '#27ae60', 
@@ -226,12 +248,14 @@ const inputIdOculto = document.getElementById('txtMaterialId');
 if (inputBusquedaMat) {
     inputBusquedaMat.addEventListener('input', async (e) => {
         const texto = e.target.value;
+
         if (texto.length < 2) {
             listaSugMat.style.display = 'none';
             return;
         }
 
         try {
+            // Ahora mandamos el texto crudo, el Backend se encargará de filtrarlo
             const response = await fetch(`${API_URL}/Materiales/buscar?termino=${texto}`);
             const materiales = await response.json();
 
@@ -248,13 +272,28 @@ if (inputBusquedaMat) {
                     item.onclick = () => {
                         inputBusquedaMat.value = m.titulo;
                         inputIdOculto.value = m.id;
+                        inputIdOculto.dataset.categoria = m.categoria; // Guardar categoría para REQ-10
                         listaSugMat.style.display = 'none';
 
                         const divHoras = document.getElementById('divDuracionHoras');
-                        if(m.categoria === "Salón" || m.categoria === "Material Deportivo") {
+                        const selHoras = document.getElementById('selHoras');
+
+                        if(m.categoria === "Material Deportivo") {
                             divHoras.style.display = 'block';
+                            selHoras.innerHTML = `
+                                <option value="1" selected>1 Hora (Receso / Clase E.F.)</option>
+                                <option value="2">2 Horas (Evento o Torneo)</option>
+                            `;
+                        } else if (m.categoria === "Salón") {
+                            divHoras.style.display = 'block';
+                            selHoras.innerHTML = `
+                                <option value="1">1 Hora (Clase corta)</option>
+                                <option value="2" selected>2 Horas (Bloque Doble)</option>
+                                <option value="4">4 Horas (Medio Turno)</option>
+                                <option value="6">6 Horas (Turno Completo)</option>
+                            `;
                         } else {
-                            divHoras.style.display = 'none';
+                            divHoras.style.display = 'none'; 
                         }
                     };
                     listaSugMat.appendChild(item);
@@ -274,6 +313,7 @@ const listaSugAlum = document.getElementById('listaSugerenciasAlumno');
 if (inputBusquedaAlum) {
     inputBusquedaAlum.addEventListener('input', async (e) => {
         const texto = e.target.value;
+
         if (texto.length < 3) {
             listaSugAlum.style.display = 'none';
             return;
@@ -327,10 +367,9 @@ document.addEventListener('click', (e) => {
     if (listaSugAlum && e.target !== inputBusquedaAlum) listaSugAlum.style.display = 'none';
 });
 
-// EVENTOS INICIALES (Incluye listeners de Scroll Doble)
+// EVENTOS INICIALES
 document.addEventListener('DOMContentLoaded', () => {
 
-    // --- NUEVO: Activamos la lógica del escáner en los dos buscadores clave ---
     habilitarScanner('txtBusquedaAlumno');
     habilitarScanner('txtBusquedaMaterial');
 
@@ -343,15 +382,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if(cards[1]) cards[1].style.display = 'none'; 
     }
     
-    // --- MEMORIA DE SCROLL DOBLE (Ventana y Tablas) ---
-    // 1. Guardar scroll de la ventana principal
     window.addEventListener('scroll', () => {
         if (!isRestoringScroll) {
             sessionStorage.setItem('scroll_prestamos_ventana_' + filtroActual, window.scrollY);
         }
     });
 
-    // 2. Guardar scroll de cada tablita interna (pendientes y el historial general)
     const contenedoresTabla = document.querySelectorAll('.tabla-container');
     contenedoresTabla.forEach((contenedor, index) => {
         contenedor.addEventListener('scroll', () => {
@@ -364,24 +400,20 @@ document.addEventListener('DOMContentLoaded', () => {
     cargarHistorial();
 });
 
-// FUNCIÓN PARA RESTAURAR TODOS LOS SCROLLS
 function restaurarAmbosScrolls(filtro) {
-    isRestoringScroll = true; // Ponemos el candado
+    isRestoringScroll = true; 
     
     const scrollVentana = sessionStorage.getItem('scroll_prestamos_ventana_' + filtro);
     
     requestAnimationFrame(() => {
-        // 1. Restaurar scroll grandote
         window.scrollTo({ top: scrollVentana ? parseInt(scrollVentana) : 0, behavior: 'instant' });
         
-        // 2. Restaurar scroll de las tablas pequeñas
         const contenedoresTabla = document.querySelectorAll('.tabla-container');
         contenedoresTabla.forEach((contenedor, index) => {
             const scrollInterno = sessionStorage.getItem('scroll_prestamos_interno_' + index + '_' + filtro);
             contenedor.scrollTop = scrollInterno ? parseInt(scrollInterno) : 0;
         });
         
-        // Quitamos el candado después de un pequeñísimo delay
         setTimeout(() => { isRestoringScroll = false; }, 150); 
     });
 }
@@ -443,11 +475,9 @@ async function traerDatosHistorial(esCargaExtra = false) {
 
             if (h.estado === "Activo") {
                 if (esFechaValida && hoy > fechaVencimiento) {
-                    // ROJO: Vencido 
                     estiloFila = "background-color: #fef2f2; color: #991b1b; border-left: 5px solid #dc2626;";
                     badgeEstado = `<span style="font-weight:bold;">⚠️ ATRASADO (Vence: ${fVenceStr})</span>`;
                 } else {
-                    // NARANJA: Pendiente en tiempo
                     estiloFila = "background-color: #fff7ed; color: #9a3412; border-left: 5px solid #f97316;";
                     badgeEstado = `<span style="font-weight:bold;">Pendiente (Entrega: ${fVenceStr})</span>`;
                 }
@@ -475,8 +505,6 @@ async function traerDatosHistorial(esCargaExtra = false) {
         });
 
         actualizarBotonCargarMas(datos.length);
-        
-        // Reaplicar el filtro y restaurar la memoria del scroll de golpe
         aplicarFiltroActual();
 
     } catch (error) {
@@ -521,11 +549,9 @@ async function renovarPrestamo(id) {
     }
 }
 
-// --- NUEVA LÓGICA DE FILTROS ---
 function filtrarHistorial(tipo, botonHtml = null) {
-    filtroActual = tipo; // Guardamos en memoria qué filtro está activo
+    filtroActual = tipo; 
     
-    // Cambiar la clase "active" visualmente si se hizo clic en un botón
     if (botonHtml) {
         document.querySelectorAll('.filter-bar-orange .chip').forEach(btn => btn.classList.remove('active'));
         botonHtml.classList.add('active');
@@ -548,7 +574,6 @@ function filtrarHistorial(tipo, botonHtml = null) {
         }
     });
 
-    // Llamamos a restaurar scrolls después de filtrar
     restaurarAmbosScrolls(tipo);
 }
 

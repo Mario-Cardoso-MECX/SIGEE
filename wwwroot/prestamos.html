@@ -52,22 +52,22 @@
                     </div>
                     <form id="formPrestamo" onsubmit="event.preventDefault(); realizarPrestamo();" class="form-padding">
                         <div class="form-group" style="position: relative;">
-                            <label>Buscar Material o Salón:</label>
+                            <label>Buscar Material</label>
                             <div class="input-wrapper">
                                 <i class="fas fa-book search-icon"></i>
                                 <input type="text" id="txtBusquedaMaterial" class="input-grande" placeholder="Ej: Libro de Historia..." autocomplete="off">
                             </div>
                             <div id="listaSugerencias" class="sugerencias-dropdown"></div>
-                            <input type="hidden" id="txtMaterialId">
+                            <input type="hidden" id="txtMaterialId" data-categoria="">
                         </div>
 
                         <div id="divDuracionHoras" class="form-group" style="display: none;">
                             <label><i class="fas fa-clock"></i> Duración del préstamo:</label>
                             <select id="selHoras" class="input-grande">
-                                <option value="1">1 Hora (Clase corta)</option>
-                                <option value="2" selected>2 Horas (Bloque normal)</option>
-                                <option value="4">4 Horas (Medio turno)</option>
-                                <option value="6">6 Horas (Turno completo)</option>
+                                <option value="1">1 Hora (Receso / Clase Corta)</option>
+                                <option value="2" selected>2 Horas (Bloque Doble)</option>
+                                <option value="4">4 Horas (Medio Turno)</option>
+                                <option value="6">6 Horas (Turno Completo)</option>
                             </select>
                         </div>
                         

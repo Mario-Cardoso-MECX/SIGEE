@@ -28,12 +28,25 @@ namespace GestorInventarioPrimaria.Controllers
         [HttpGet("buscar")]
         public async Task<ActionResult<IEnumerable<Material>>> BuscarMateriales([FromQuery] string termino)
         {
-            if (string.IsNullOrWhiteSpace(termino)) return Ok(new List<Material>());
+            if (string.IsNullOrWhiteSpace(termino) || termino.Length < 2) 
+                return Ok(new List<Material>());
 
-            return await _context.Materiales
-                .Where(m => m.Titulo.Contains(termino) || m.Categoria.Contains(termino))
+            // 1. Limpiamos lo que el usuario escribió
+            var terminoLimpio = RemoveDiacritics(termino.Trim().ToLower());
+
+            // 2. Traemos los materiales a memoria para compararlos correctamente
+            var materiales = await _context.Materiales.ToListAsync();
+
+            // 3. Comparamos títulos y categorías quitando acentos también de la base
+            var resultados = materiales
+                .Where(m => 
+                    (m.Titulo != null && RemoveDiacritics(m.Titulo.ToLower()).Contains(terminoLimpio)) || 
+                    (m.Categoria != null && RemoveDiacritics(m.Categoria.ToLower()).Contains(terminoLimpio))
+                )
                 .Take(10)
-                .ToListAsync();
+                .ToList();
+
+            return Ok(resultados);
         }
 
         // POST: api/Materiales
@@ -82,6 +95,28 @@ namespace GestorInventarioPrimaria.Controllers
             _context.Materiales.Remove(material);
             await _context.SaveChangesAsync();
             return Ok();
+        }
+
+        // --- Método privado para quitar acentos en C# ---
+        private static string RemoveDiacritics(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+                return text;
+
+            var normalizedString = text.Normalize(System.Text.NormalizationForm.FormD);
+            var stringBuilder = new System.Text.StringBuilder(capacity: normalizedString.Length);
+
+            for (int i = 0; i < normalizedString.Length; i++)
+            {
+                char c = normalizedString[i];
+                var unicodeCategory = System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c);
+                if (unicodeCategory != System.Globalization.UnicodeCategory.NonSpacingMark)
+                {
+                    stringBuilder.Append(c);
+                }
+            }
+
+            return stringBuilder.ToString().Normalize(System.Text.NormalizationForm.FormC);
         }
     }
 }
