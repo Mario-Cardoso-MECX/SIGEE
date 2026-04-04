@@ -35,7 +35,7 @@
         document.ontouchstart = resetTimer; // Para celulares
 
         // --- VIGILANTE DE SESIONES ÚNICAS (TOKEN) ---
-        document.addEventListener("DOMContentLoaded", () => {
+        function vigilarSesion() {
             if (typeof API_URL !== 'undefined' && sesion.username && sesion.token) {
                 fetch(`${API_URL}/Auth/verificar-sesion?username=${sesion.username}&token=${sesion.token}`)
                     .then(response => {
@@ -47,7 +47,13 @@
                     })
                     .catch(err => console.error("Error validando sesión", err));
             }
-        });
+        }
+
+        // Revisa al cargar la página...
+        document.addEventListener("DOMContentLoaded", vigilarSesion);
+        
+        // ¡LA MAGIA! Revisa en silencio cada 5 segundos (5000 ms)
+        setInterval(vigilarSesion, 5000);
     }
 })();
 
