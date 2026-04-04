@@ -262,7 +262,7 @@ async function preguntarExportacionExcel() {
     const termText = document.getElementById('txtFiltrarAlumnos').value;
 
     if (!termGrado && !termLetra && !termText) {
-        exportarTablaExcel('tablaAlumnos', 'Reporte_Escuela_Completa', false);
+        exportarExcel('tablaAlumnos', 'Reporte_Escuela_Completa', false);
         return;
     }
 
@@ -277,9 +277,9 @@ async function preguntarExportacionExcel() {
         if(termGrado) sufijo += termGrado;
         if(termLetra) sufijo += termLetra;
         let nombre = sufijo ? `Reporte_Alumnos_${sufijo}` : 'Reporte_Alumnos_Filtrados';
-        exportarTablaExcel('tablaAlumnos', nombre, true); 
+        exportarExcel('tablaAlumnos', nombre, true); 
     } else if (result.isDenied) {
-        exportarTablaExcel('tablaAlumnos', 'Reporte_Escuela_Completa', false); 
+        exportarExcel('tablaAlumnos', 'Reporte_Escuela_Completa', false); 
     }
 }
 
