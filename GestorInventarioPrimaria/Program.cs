@@ -61,12 +61,12 @@ options.DefaultFileNames.Add("login.html");
 app.UseDefaultFiles(options); 
 
 // Le enseñamos a Program.cs a dar "un paso atrás" igual que el controlador
-string rutaFront = Path.Combine(builder.Environment.ContentRootPath, "front");
-string rutaHermano = Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, "..", "front"));
+string rutaFront = Path.Combine(builder.Environment.ContentRootPath, "wwwroot");
+string rutaHermano = Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, "..", "wwwroot"));
 
 if (Directory.Exists(rutaHermano))
 {
-    // Si encuentra la carpeta "front" afuera del backend (Entorno Visual Studio)
+    // Si encuentra la carpeta "wwwroot" afuera del backend (Entorno Visual Studio)
     app.UseStaticFiles(new StaticFileOptions
     {
         FileProvider = new PhysicalFileProvider(rutaHermano),

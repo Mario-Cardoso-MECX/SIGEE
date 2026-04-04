@@ -33,12 +33,15 @@ namespace GestorInventarioPrimaria.Controllers
             usuario.TokenSesion = Guid.NewGuid().ToString();
             await _context.SaveChangesAsync();
 
+            // AQUÍ ESTABA EL DETALLE: Agregamos el ID y los Apellidos
             return Ok(new
             {
+                id = usuario.Id,
                 nombre = usuario.Nombre,
+                apellidos = usuario.Apellidos,
                 username = usuario.Username,
                 rol = usuario.Rol,
-                token = usuario.TokenSesion // Lo mandamos al frontend
+                token = usuario.TokenSesion 
             });
         }
 

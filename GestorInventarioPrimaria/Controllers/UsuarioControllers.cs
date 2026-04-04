@@ -77,7 +77,7 @@ namespace GestorInventarioPrimaria.Controllers
             return Ok(new { mensaje = "✅ Alumno registrado con éxito", matricula = nuevoAlumno.Matricula });
         }
 
-        // --- CORRECCIÓN DE RUTA PARA SUBIR FOTO ---
+        // --- SUBIR FOTO ALUMNOS (FORZADO AL FRONTEND REAL) ---
         [HttpPost("subir-foto/{matricula}")]
         public async Task<IActionResult> SubirFotoAlumno(string matricula, IFormFile foto)
         {
@@ -91,16 +91,18 @@ namespace GestorInventarioPrimaria.Controllers
             if (ext != ".jpg" && ext != ".jpeg" && ext != ".png")
                 return BadRequest(new { mensaje = "Solo se permiten imágenes JPG o PNG." });
 
-            // MAGIA PARA ENCONTRAR LA CARPETA FRONT REAL
-            string carpetaBase = _env.WebRootPath;
-            if (string.IsNullOrEmpty(carpetaBase))
+            // MAGIA DE RUTAS: Salimos del backend ("..") y entramos a wwwroot
+            string carpetaBase = Path.GetFullPath(Path.Combine(_env.ContentRootPath, "..", "wwwroot"));
+            
+            // Si por alguna razón la de afuera no existe, usamos un respaldo
+            if (!Directory.Exists(carpetaBase))
             {
-                string rutaHermano = Path.GetFullPath(Path.Combine(_env.ContentRootPath, "..", "front"));
-                carpetaBase = Directory.Exists(rutaHermano) ? rutaHermano : Path.Combine(_env.ContentRootPath, "front");
+                 carpetaBase = Path.Combine(_env.ContentRootPath, "wwwroot");
             }
             
             string carpetaDestino = Path.Combine(carpetaBase, "fotos_alumnos");
 
+            // CREA LA CARPETA AUTOMÁTICAMENTE SI NO EXISTE
             if (!Directory.Exists(carpetaDestino))
                 Directory.CreateDirectory(carpetaDestino);
 
@@ -299,16 +301,17 @@ namespace GestorInventarioPrimaria.Controllers
             return Ok(new { mensaje = $"Limpieza completada. Se eliminaron {borrados} egresados sin deudas." + warning });
         }
 
-        // --- NUEVO: FUNCIÓN PARA SINCRONIZACIÓN MASIVA DE FOTOS ---
+        // --- SINCRONIZAR FOTOS (FORZADO AL FRONTEND REAL) ---
         [HttpPost("sincronizar-fotos")]
         public async Task<IActionResult> SincronizarFotos()
         {
-            string carpetaBase = _env.WebRootPath;
-            if (string.IsNullOrEmpty(carpetaBase))
+            string carpetaBase = Path.GetFullPath(Path.Combine(_env.ContentRootPath, "..", "wwwroot"));
+            
+            if (!Directory.Exists(carpetaBase))
             {
-                string rutaHermano = Path.GetFullPath(Path.Combine(_env.ContentRootPath, "..", "front"));
-                carpetaBase = Directory.Exists(rutaHermano) ? rutaHermano : Path.Combine(_env.ContentRootPath, "front");
+                 carpetaBase = Path.Combine(_env.ContentRootPath, "wwwroot");
             }
+
             string carpetaDestino = Path.Combine(carpetaBase, "fotos_alumnos");
 
             if (!Directory.Exists(carpetaDestino))
@@ -351,5 +354,78 @@ namespace GestorInventarioPrimaria.Controllers
                 ignoradas = ignoradas 
             });
         }
+
+        // =======================================================
+        // --- ENDPOINTS PARA EL PERFIL DEL PERSONAL ---
+        // =======================================================
+
+        // --- SUBIR FOTO PERSONAL (FORZADO AL FRONTEND REAL) ---
+        [HttpPost("subir-foto-personal/{username}")]
+        public async Task<IActionResult> SubirFotoPersonal(string username, IFormFile foto)
+        {
+            if (foto == null || foto.Length == 0)
+                return BadRequest(new { mensaje = "No se recibió ninguna imagen." });
+
+            var personal = await _context.Usuarios.FirstOrDefaultAsync(u => u.Username == username && u.Rol != "Alumno");
+            if (personal == null) return NotFound(new { mensaje = "Usuario no encontrado." });
+
+            var ext = Path.GetExtension(foto.FileName).ToLowerInvariant();
+            if (ext != ".jpg" && ext != ".jpeg" && ext != ".png")
+                return BadRequest(new { mensaje = "Solo se permiten imágenes JPG o PNG." });
+
+            string carpetaBase = Path.GetFullPath(Path.Combine(_env.ContentRootPath, "..", "wwwroot"));
+            
+            if (!Directory.Exists(carpetaBase))
+            {
+                 carpetaBase = Path.Combine(_env.ContentRootPath, "wwwroot");
+            }
+            
+            // CREA LA CARPETA AUTOMÁTICAMENTE SI NO EXISTE EN EL FRONTEND
+            string carpetaDestino = Path.Combine(carpetaBase, "fotos_personal");
+            if (!Directory.Exists(carpetaDestino)) Directory.CreateDirectory(carpetaDestino);
+
+            // BORRA FOTOS VIEJAS PARA NO DUPLICAR
+            var archivosExistentes = Directory.GetFiles(carpetaDestino, $"{username}.*");
+            foreach (var archivoViejo in archivosExistentes)
+            {
+                System.IO.File.Delete(archivoViejo);
+            }
+
+            // NOMBRA EL ARCHIVO CON EL USERNAME DEL PROFESOR
+            string nombreArchivo = $"{username}{ext}";
+            string rutaCompleta = Path.Combine(carpetaDestino, nombreArchivo);
+
+            using (var stream = new FileStream(rutaCompleta, FileMode.Create))
+            {
+                await foto.CopyToAsync(stream);
+            }
+
+            personal.FotoUrl = $"/fotos_personal/{nombreArchivo}";
+            await _context.SaveChangesAsync();
+
+            return Ok(new { mensaje = "Foto de perfil actualizada.", fotoUrl = personal.FotoUrl });
+        }
+
+        [HttpPut("cambiar-password")]
+        public async Task<IActionResult> CambiarPassword([FromBody] CambioPasswordDto datos)
+        {
+            var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Username == datos.Username);
+            if (usuario == null) return NotFound(new { mensaje = "Usuario no encontrado." });
+
+            if (usuario.PasswordHash != datos.PasswordActual)
+                return BadRequest(new { mensaje = "La contraseña actual es incorrecta." });
+
+            usuario.PasswordHash = datos.PasswordNueva;
+            await _context.SaveChangesAsync();
+
+            return Ok(new { mensaje = "Contraseña actualizada correctamente." });
+        }
+    }
+
+    // DTO para atrapar los datos del frontend (Personal Administrativo)
+    public class CambioPasswordDto {
+        public required string Username { get; set; }
+        public required string PasswordActual { get; set; }
+        public required string PasswordNueva { get; set; }
     }
 }
