@@ -175,9 +175,15 @@ async function registrarAlumno() {
         return; 
     }
     
-    const resultado = document.getElementById('resultadoRegistro');
     const url = id ? `${API_URL}/Usuarios/editar-alumno/${id}` : `${API_URL}/Usuarios/crear`;
     const metodo = id ? 'PUT' : 'POST';
+
+    // Mostramos la alerta de carga
+    Swal.fire({
+        title: id ? 'Actualizando alumno...' : 'Registrando alumno...',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+    });
 
     try {
         const response = await fetch(url, {
@@ -188,18 +194,36 @@ async function registrarAlumno() {
 
         if (response.ok) {
             const data = await response.json();
-            resultado.innerHTML = `<span style="color:green;">✅ ${data.mensaje}</span>`;
             
-            // Reutilizamos la nueva función de limpiar para resetear todo el formulario
+            // --- ALERTA QUE SE CIERRA SOLA (IGUAL QUE EN INVENTARIO) ---
+            Swal.fire({
+                title: id ? '¡Actualizado!' : '¡Registrado!',
+                text: data.mensaje,
+                icon: 'success',
+                showConfirmButton: false,
+                timer: 2000 // Se desaparece en 2 segundos solita
+            });
+            
+            // Limpiamos el formulario y recargamos la tabla
             limpiarFormularioAlumno();
-            
             cargarAlumnos(); 
+            
         } else {
             const errorMsg = await response.text();
-            resultado.innerHTML = `<span style="color:red;">❌ Error: ${errorMsg}</span>`;
+            Swal.fire({
+                title: 'Error',
+                text: errorMsg,
+                icon: 'error',
+                confirmButtonColor: '#e74c3c'
+            });
         }
     } catch (error) {
-        resultado.innerHTML = `<span style="color:red;">⚠️ Error de conexión.</span>`;
+        Swal.fire({
+            title: 'Error de conexión',
+            text: 'No se pudo contactar con el servidor. Revisa tu red.',
+            icon: 'error',
+            confirmButtonColor: '#e74c3c'
+        });
     }
 }
 
