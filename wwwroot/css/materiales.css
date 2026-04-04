@@ -100,7 +100,7 @@
     background: #ffffff;
     border-radius: 15px;
     box-shadow: 0 10px 25px rgba(0,0,0,0.05);
-    border-top: 5px solid #27ae60; /* El verde alegre que elegimos */
+    border-top: 5px solid #27ae60; 
     margin-bottom: 30px;
     overflow: hidden;
 }
@@ -125,18 +125,57 @@
     color: #27ae60;
 }
 
-.search-container .input-wrapper {
+/* --- SOLUCIÓN AL BUSCADOR CHONCHO --- */
+.search-container {
+    margin-bottom: 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.input-wrapper {
+    position: relative; /* Clave para posicionar la lupa encima */
+    flex: 1;
+    min-width: 250px;
+    display: flex;
+    align-items: center;
+}
+
+.search-icon {
+    position: absolute;
+    left: 15px;
+    color: #3498db;
+    font-size: 1rem;
+}
+
+.input-wrapper .input-grande {
+    width: 100% !important;
+    padding: 10px 15px 10px 40px !important; /* El 40px da espacio para la lupa a la izq */
     border: 2px solid #3498db;
     background-color: #f1f5f9;
     border-radius: 25px;
-    padding: 12px 15px;
     font-size: 1rem;
     transition: all 0.3s ease;
     color: #3498db;
+    box-sizing: border-box; /* Evita que crezca de más */
 }
 
-.search-container{
-    margin-bottom: 30px;
+.input-wrapper .input-grande:focus {
+    outline: none;
+    box-shadow: 0 0 5px rgba(52, 152, 219, 0.5);
+}
+
+/* Botón Excel de Materiales */
+#btnExportarExcelMat {
+    padding: 10px 20px !important; /* Altura controlada */
+    border-radius: 25px !important;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 42px !important; /* Forzamos misma altura que el buscador */
 }
 
 /* Contenedor de los Chips (Filtros) */
@@ -144,13 +183,13 @@
     display: flex;
     gap: 12px;
     margin-bottom: 25px;
-    flex-wrap: wrap; /* Para que en móviles no se corten */
-    justify-content: flex-start; /* Alineados a la izquierda, o 'center' si prefieres */
+    flex-wrap: wrap; 
+    justify-content: flex-start; 
 }
 
 .chip {
     padding: 10px 20px;
-    border-radius: 50px; /* Estilo píldora como el user-badge */
+    border-radius: 50px; 
     border: 1px solid #dee2e6;
     background: #ffffff;
     color: #475569;
@@ -168,7 +207,7 @@
 }
 
 .chip.active {
-    background: #3498db; /* Azul alegre */
+    background: #3498db; 
     color: white;
     border-color: #3498db;
     box-shadow: 0 4px 10px rgba(52, 152, 219, 0.3);
@@ -183,15 +222,18 @@
 /* Forzar a que los inputs y selects llenen su contenedor */
 .form-group .input-grande, 
 .form-group select.input-grande {
-    width: 100% !important; /* El !important asegura que sobreponga estilos previos */
+    width: 100% !important; 
     display: block;
-    box-sizing: border-box; /* Evita que el padding los saque de la caja */
+    box-sizing: border-box; 
+    padding: 10px 15px; /* Estandarizamos alturas en el formulario */
+    border: 2px solid #ddd;
+    border-radius: 8px;
 }
 
 /* Si quieres que Categoría y Stock sigan en dos columnas pero estiradas */
 .form-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr; /* Dos columnas iguales */
+    grid-template-columns: 1fr 1fr; 
     gap: 20px;
     width: 100%;
 }
@@ -207,16 +249,6 @@
     letter-spacing: 0.5px;
 }
 
-/* Inputs y Selects */
-.input-grande {
-    border: none;
-    background-color: inherit;
-    width: 90%;
-}
-.input-grande:focus {
-    outline: none;
-}
-
 /* Botones dentro del formulario */
 .button-group {
     display: flex;
@@ -227,7 +259,7 @@
 }
 
 .btn-verde, .btn-cancelar {
-    flex: 1; /* Los botones ocupan el mismo ancho */
+    flex: 1; 
     display: flex;
     justify-content: center;
     align-items: center;
@@ -254,7 +286,7 @@
     color: white;
 }
 
-/* --- NUEVOS BOTONES DE ACCIÓN EN TABLA (Estilo Alumnos) --- */
+/* --- NUEVOS BOTONES DE ACCIÓN EN TABLA --- */
 .acciones-flex {
     display: flex;
     justify-content: center;
@@ -280,15 +312,16 @@ td button {
 
 /* --- TABLA CON SCROLL INTERNO --- */
 .tabla-container {
-    max-height: 60vh; /* Controla la altura de la caja (60% de la pantalla) */
-    overflow-y: auto; /* Muestra el scroll interno solo si es necesario */
+    max-height: 60vh; 
+    overflow-y: auto; 
     border-radius: 12px;
     box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     background-color: white;
     margin-top: 15px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
-/* Congela los títulos (ID, Título, Categoría) arriba al bajar */
 .tabla-compacta thead th {
     position: sticky;
     top: 0;
@@ -297,7 +330,11 @@ td button {
     box-shadow: 0 2px 5px rgba(0,0,0,0.2); 
 }
 
-/* --- MAGIA RESPONSIVA (AGREGADO Y MEJORADO) --- */
+.tabla-compacta {
+    min-width: 800px;
+}
+
+/* --- MAGIA RESPONSIVA --- */
 @media (max-width: 768px) {
     .button-group {
         flex-direction: column;
@@ -308,12 +345,17 @@ td button {
     .form-grid {
         grid-template-columns: 1fr;
     }
-}
-/* Evita que la tabla se aplaste en celulares */
-.tabla-container {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-}
-.tabla-compacta {
-    min-width: 800px;
+
+    /* Ajuste fino para buscador en celular */
+    .search-container {
+        flex-direction: column !important;
+        align-items: stretch !important;
+    }
+    .input-wrapper .input-grande {
+        padding: 8px 15px 8px 35px !important; /* Aún más delgado en cel */
+    }
+    #btnExportarExcelMat {
+        width: 100% !important;
+        justify-content: center !important;
+    }
 }

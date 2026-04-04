@@ -272,8 +272,9 @@ function prepararEdicion(id, titulo, categoria, stock) {
 function limpiarFormulario() {
     document.getElementById('formMaterial').reset();
     document.getElementById('txtIdMaterial').value = "";
-    document.getElementById('tituloForm').innerText = "📚 Gestionar Material / Libro";
-    document.getElementById('btnGuardar').innerText = "Guardar en Inventario";
+    // CORRECCIÓN: Usamos innerHTML para respetar los iconos de FontAwesome
+    document.getElementById('tituloForm').innerHTML = `<i class="fas fa-edit"></i> Gestionar Material / Libro`;
+    document.getElementById('btnGuardar').innerHTML = `<i class="fas fa-check-circle"></i> Guardar Material`;
 }
 
 // --- BUSCADOR INTELIGENTE Y RESTAURACIÓN DOBLE ---

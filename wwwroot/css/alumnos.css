@@ -75,7 +75,30 @@
     outline: none;
 }
 
-#formNuevoAlumno .btn-verde {
+/* --- NUEVO GRUPO DE BOTONES (50/50 en PC) --- */
+.button-group {
+    display: flex;
+    gap: 15px;
+    margin: 0 25px 25px 25px;
+}
+
+.button-group .btn-verde, .button-group .btn-cancelar {
+    flex: 1; /* Ocupan mitad y mitad */
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    padding: 15px;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+/* Respaldo para cuando el boton verde esta solo o fuera del grupo */
+#formNuevoAlumno > .btn-verde {
     width: calc(100% - 50px);
     margin: 0 25px 25px 25px;
     padding: 15px;
@@ -85,16 +108,20 @@
     background-color: var(--verde-alegre);
     color: white;
     border: none;
-    padding: 10px 20px;
-    border-radius: 8px;
-    font-size: 1rem;
-    font-weight: bold;
-    cursor: pointer;
-    transition: background 0.3s;
 }
 
 .btn-verde:hover {
     background-color: var(--verde-hover);
+}
+
+.btn-cancelar {
+    background-color: #6b7280;
+    color: white;
+    border: none;
+}
+
+.btn-cancelar:hover {
+    background-color: #4b5563;
 }
 
 /* Buscador (DISEÑO ORIGINAL DE PC) */
@@ -214,6 +241,12 @@ td button {
 @media (max-width: 768px) {
     .form-grid {
         grid-template-columns: 1fr;
+    }
+
+    /* Adaptación del nuevo grupo de botones para que se apilen en celular */
+    .button-group {
+        flex-direction: column;
+        gap: 10px;
     }
 
     table {

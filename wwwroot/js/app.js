@@ -1,4 +1,16 @@
-
+// --- DETECTAR REDIRECCIÓN POR INACTIVIDAD O SESIÓN DUPLICADA ---
+document.addEventListener("DOMContentLoaded", () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    if (urlParams.get('expirado') === 'true') {
+        Swal.fire('Sesión Cerrada', 'Tu sesión expiró por inactividad.', 'info');
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    else if (urlParams.get('duplicado') === 'true') {
+        Swal.fire('Sesión Terminada', 'Tu cuenta fue abierta en otro dispositivo. Por seguridad, te hemos desconectado aquí.', 'warning');
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+});
 
 // DOM Elements
 const loginForm = document.getElementById('loginForm');
@@ -50,7 +62,7 @@ loginForm.addEventListener('submit', async (e) => {
         showError("Error de conexión con el servidor.");
     } finally {
         // Restaurar botón si falló
-        if (btnLogin.innerText !== "¡Éxito!") {
+        if (btnLogin.innerText !== "¡Inicio de sesión exitoso!") {
             btnLogin.disabled = false;
             btnLogin.innerText = originalText;
         }

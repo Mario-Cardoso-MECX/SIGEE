@@ -32,5 +32,9 @@ namespace GestorInventarioPrimaria.Models
         // --- NUEVO CAMPO PARA CREDENCIALES ---
         [MaxLength(500)]
         public string? FotoUrl { get; set; } // Guardará la ruta física o web de la foto del alumno
+
+        // --- NUEVO CAMPO PARA SESIÓN ÚNICA ---
+        [MaxLength(100)]
+        public string? TokenSesion { get; set; }
     }
 }

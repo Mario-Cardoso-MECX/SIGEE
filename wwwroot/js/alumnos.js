@@ -189,10 +189,10 @@ async function registrarAlumno() {
         if (response.ok) {
             const data = await response.json();
             resultado.innerHTML = `<span style="color:green;">✅ ${data.mensaje}</span>`;
-            document.getElementById('formNuevoAlumno').reset();
-            document.getElementById('txtIdAlumno').value = "";
-            document.querySelector('.card-header h2').innerHTML = `<i class="fas fa-user-plus"></i> Registrar Nuevo Alumno`;
-            document.querySelector('#formNuevoAlumno button[type="submit"]').innerHTML = `<i class="fas fa-id-card"></i> Registrar y Generar Matrícula`;
+            
+            // Reutilizamos la nueva función de limpiar para resetear todo el formulario
+            limpiarFormularioAlumno();
+            
             cargarAlumnos(); 
         } else {
             const errorMsg = await response.text();
@@ -201,6 +201,15 @@ async function registrarAlumno() {
     } catch (error) {
         resultado.innerHTML = `<span style="color:red;">⚠️ Error de conexión.</span>`;
     }
+}
+
+// --- NUEVA FUNCION DE LIMPIAR ---
+function limpiarFormularioAlumno() {
+    document.getElementById('formNuevoAlumno').reset();
+    document.getElementById('txtIdAlumno').value = "";
+    document.querySelector('.card-header h2').innerHTML = `<i class="fas fa-user-plus"></i> Registrar Nuevo Alumno`;
+    document.querySelector('#formNuevoAlumno button[type="submit"]').innerHTML = `<i class="fas fa-id-card"></i> Registrar y Generar Matrícula`;
+    document.getElementById('resultadoRegistro').innerHTML = ""; // Limpia también mensajes de error/éxito si los hubiera
 }
 
 async function eliminarAlumno(id) {
