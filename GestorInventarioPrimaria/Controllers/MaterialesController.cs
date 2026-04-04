@@ -20,7 +20,7 @@ namespace GestorInventarioPrimaria.Controllers
         public async Task<ActionResult<IEnumerable<Material>>> GetMateriales()
         {
             return await _context.Materiales
-                                 .OrderBy(m => m.Titulo)
+                                 .OrderBy(m => m.Id)
                                  .ToListAsync();
         }
 
