@@ -16,14 +16,16 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function cargarPersonal() {
+    const sesion = JSON.parse(localStorage.getItem('usuarioSesion')) || {};
     try {
-        const response = await fetch(`${API_URL}/Usuarios/personal`);
+        const response = await fetch(`${API_URL}/Usuarios/personal`, {
+            headers: { 'Authorization': `Bearer ${sesion.token}` } // <-- NUEVO: TOKEN
+        });
         const personal = await response.json();
         
         const tabla = document.getElementById('tablaPersonal');
         tabla.innerHTML = "";
 
-        const sesion = JSON.parse(localStorage.getItem('usuarioSesion')) || {};
         const esAdmin = sesion.rol === 'Admin';
 
         if (personal.length === 0) {
@@ -93,9 +95,11 @@ async function eliminarAdmin(id, nombre) {
     });
 
     if (confirmacion.isConfirmed) {
+        const sesion = JSON.parse(localStorage.getItem('usuarioSesion')) || {};
         try {
             const response = await fetch(`${API_URL}/Usuarios/eliminar-personal/${id}`, {
-                method: 'DELETE'
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${sesion.token}` } // <-- NUEVO: TOKEN
             });
 
             if (response.ok) {
@@ -118,8 +122,11 @@ async function eliminarAdmin(id, nombre) {
 }
 
 async function prepararEditar(id) {
+    const sesion = JSON.parse(localStorage.getItem('usuarioSesion')) || {};
     try {
-        const response = await fetch(`${API_URL}/Usuarios/${id}`);
+        const response = await fetch(`${API_URL}/Usuarios/${id}`, {
+            headers: { 'Authorization': `Bearer ${sesion.token}` } // <-- NUEVO: TOKEN
+        });
         const u = await response.json();
 
         // Llenamos el formulario con lo que viene de la base de datos
@@ -164,6 +171,8 @@ async function guardarPersonal() {
         datos.passwordHash = password; 
     }
 
+    const sesion = JSON.parse(localStorage.getItem('usuarioSesion')) || {};
+
     try {
         let response;
         
@@ -172,7 +181,10 @@ async function guardarPersonal() {
             datos.id = parseInt(id);
             response = await fetch(`${API_URL}/Usuarios/editar-personal/${id}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${sesion.token}` // <-- NUEVO: TOKEN
+                },
                 body: JSON.stringify(datos)
             });
         } else {
@@ -181,7 +193,10 @@ async function guardarPersonal() {
             
             response = await fetch(`${API_URL}/Usuarios/crear-personal`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${sesion.token}` // <-- NUEVO: TOKEN
+                },
                 body: JSON.stringify(datos)
             });
         }

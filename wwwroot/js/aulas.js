@@ -41,7 +41,10 @@ async function cargarReservas() {
     try {
         // Truco anti-caché: agregar timestamp
         const urlFresca = `${API_URL}/Aulas/reservas?t=${new Date().getTime()}`;
-        const response = await fetch(urlFresca);
+        // --- NUEVO: AGREGAMOS EL TOKEN DE SEGURIDAD ---
+        const response = await fetch(urlFresca, {
+            headers: { 'Authorization': `Bearer ${sesion.token}` }
+        });
         const reservas = await response.json();
         
         tabla.innerHTML = '';
@@ -130,7 +133,10 @@ async function solicitarReserva() {
     try {
         const response = await fetch(`${API_URL}/Aulas/solicitar`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${sesion.token}` // <-- NUEVO: TOKEN JWT
+            },
             body: JSON.stringify({
                 Matricula: miMatriculaRaw, 
                 Fecha: fecha,
@@ -162,8 +168,12 @@ async function solicitarReserva() {
 }
 
 async function aprobarReserva(id) {
+    const sesion = JSON.parse(localStorage.getItem('usuarioSesion')) || {};
     try {
-        const response = await fetch(`${API_URL}/Aulas/aprobar/${id}`, { method: 'PUT' });
+        const response = await fetch(`${API_URL}/Aulas/aprobar/${id}`, { 
+            method: 'PUT',
+            headers: { 'Authorization': `Bearer ${sesion.token}` } // <-- NUEVO: TOKEN
+        });
         if(response.ok) {
             Swal.fire({title: 'Aprobada', icon: 'success', timer: 1500, showConfirmButton: false});
             cargarReservas();
@@ -183,10 +193,14 @@ async function rechazarReserva(id) {
     });
 
     if (motivoRechazo !== undefined) { 
+        const sesion = JSON.parse(localStorage.getItem('usuarioSesion')) || {};
         try {
             const response = await fetch(`${API_URL}/Aulas/rechazar/${id}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${sesion.token}` // <-- NUEVO: TOKEN
+                },
                 body: JSON.stringify({ motivo: motivoRechazo || 'Sin motivo especificado' })
             });
             if(response.ok) {
@@ -207,8 +221,12 @@ async function cancelarReserva(id) {
     });
 
     if(confirmacion.isConfirmed) {
+        const sesion = JSON.parse(localStorage.getItem('usuarioSesion')) || {};
         try {
-            await fetch(`${API_URL}/Aulas/cancelar/${id}`, { method: 'DELETE' });
+            await fetch(`${API_URL}/Aulas/cancelar/${id}`, { 
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${sesion.token}` } // <-- NUEVO: TOKEN
+            });
             cargarReservas();
         } catch(e) { console.error(e); }
     }

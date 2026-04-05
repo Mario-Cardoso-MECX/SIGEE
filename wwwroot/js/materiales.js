@@ -51,7 +51,9 @@ async function cargarInventario() {
     const puedeEditar = rol === 'Admin' || rol === 'Inventario';
 
     try {
-        const response = await fetch(`${API_URL}/Materiales`);
+        const response = await fetch(`${API_URL}/Materiales`, {
+            headers: { 'Authorization': `Bearer ${sesion.token}` } // <-- NUEVO: TOKEN
+        });
         const materiales = await response.json();
         tabla.innerHTML = '';
 
@@ -170,11 +172,16 @@ async function guardarMaterial() {
 
     const metodo = id ? 'PUT' : 'POST';
     const url = id ? `${API_URL}/Materiales/${id}` : `${API_URL}/Materiales`;
+    
+    const sesion = JSON.parse(localStorage.getItem('usuarioSesion')) || {};
 
     try {
         const response = await fetch(url, {
             method: metodo,
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${sesion.token}` // <-- NUEVO: TOKEN
+            },
             body: JSON.stringify(material)
         });
 
@@ -213,9 +220,11 @@ async function eliminarMaterial(id) {
     });
 
     if (confirmacion.isConfirmed) {
+        const sesion = JSON.parse(localStorage.getItem('usuarioSesion')) || {};
         try {
             const response = await fetch(`${API_URL}/Materiales/${id}`, {
-                method: 'DELETE'
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${sesion.token}` } // <-- NUEVO: TOKEN
             });
 
             if (response.ok) {

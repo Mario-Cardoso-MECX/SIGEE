@@ -46,8 +46,12 @@ async function cargarAlumno(matriculaOpcional = null) {
     lblMatricula.innerText = "Buscando...";
     tabla.innerHTML = '<tr><td colspan="3">Cargando...</td></tr>';
 
+    const sesion = JSON.parse(localStorage.getItem('usuarioSesion')) || {};
+
     try {
-        const response = await fetch(`${API_URL}/Prestamos/pendientes/${matriculaActual}`);
+        const response = await fetch(`${API_URL}/Prestamos/pendientes/${matriculaActual}`, {
+            headers: { 'Authorization': `Bearer ${sesion.token}` } // <-- NUEVO: TOKEN
+        });
 
         if (response.status === 404) {
             Swal.fire({ title: 'No encontrado', text: 'Alumno no encontrado o matrícula incorrecta.', icon: 'warning', confirmButtonColor: '#f39c12' });
@@ -107,10 +111,15 @@ async function realizarPrestamo() {
     msgDiv.innerText = "Procesando...";
     msgDiv.style.color = "blue";
 
+    const sesion = JSON.parse(localStorage.getItem('usuarioSesion')) || {};
+
     try {
         const response = await fetch(`${API_URL}/Prestamos/registrar`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${sesion.token}` // <-- NUEVO: TOKEN
+            },
             body: JSON.stringify({
                 matriculaAlumno: matriculaActual,
                 materialId: parseInt(materialId),
@@ -170,9 +179,11 @@ async function devolverMaterial(idReserva) {
     });
 
     if (confirmacion.isConfirmed) {
+        const sesion = JSON.parse(localStorage.getItem('usuarioSesion')) || {};
         try {
             const response = await fetch(`${API_URL}/Prestamos/devolver/${idReserva}`, {
-                method: 'PUT'
+                method: 'PUT',
+                headers: { 'Authorization': `Bearer ${sesion.token}` } // <-- NUEVO: TOKEN
             });
 
             if (response.ok) {
@@ -254,9 +265,13 @@ if (inputBusquedaMat) {
             return;
         }
 
+        const sesion = JSON.parse(localStorage.getItem('usuarioSesion')) || {};
+
         try {
             // Ahora mandamos el texto crudo, el Backend se encargará de filtrarlo
-            const response = await fetch(`${API_URL}/Materiales/buscar?termino=${texto}`);
+            const response = await fetch(`${API_URL}/Materiales/buscar?termino=${texto}`, {
+                headers: { 'Authorization': `Bearer ${sesion.token}` } // <-- NUEVO: TOKEN
+            });
             const materiales = await response.json();
 
             if (materiales.length > 0) {
@@ -319,8 +334,12 @@ if (inputBusquedaAlum) {
             return;
         }
 
+        const sesion = JSON.parse(localStorage.getItem('usuarioSesion')) || {};
+
         try {
-            const response = await fetch(`${API_URL}/Usuarios/buscar?termino=${texto}`);
+            const response = await fetch(`${API_URL}/Usuarios/buscar?termino=${texto}`, {
+                headers: { 'Authorization': `Bearer ${sesion.token}` } // <-- NUEVO: TOKEN
+            });
             const usuarios = await response.json();
 
             if (usuarios.length > 0) {
@@ -428,9 +447,12 @@ async function cargarHistorial() {
 
 async function traerDatosHistorial(esCargaExtra = false) {
     const tabla = document.getElementById('tablaHistorial');
+    const sesion = JSON.parse(localStorage.getItem('usuarioSesion')) || {};
     
     try {
-        const response = await fetch(`${API_URL}/Prestamos/historial?pagina=${paginaActualHistorial}&cantidad=10`);
+        const response = await fetch(`${API_URL}/Prestamos/historial?pagina=${paginaActualHistorial}&cantidad=10`, {
+            headers: { 'Authorization': `Bearer ${sesion.token}` } // <-- NUEVO: TOKEN
+        });
         const datos = await response.json();
 
         if (!esCargaExtra) tabla.innerHTML = ''; 
@@ -525,9 +547,11 @@ async function renovarPrestamo(id) {
     });
 
     if (confirmacion.isConfirmed) {
+        const sesion = JSON.parse(localStorage.getItem('usuarioSesion')) || {};
         try {
             const response = await fetch(`${API_URL}/Prestamos/renovar/${id}`, {
-                method: 'PUT'
+                method: 'PUT',
+                headers: { 'Authorization': `Bearer ${sesion.token}` } // <-- NUEVO: TOKEN
             });
 
             if (response.ok) {

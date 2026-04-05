@@ -5,7 +5,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // 1. Cargar las tarjetas de Resumen Numérico (Esto lo pueden ver todos)
     try {
-        const response = await fetch(`${API_URL}/dashboard/resumen`);
+        const response = await fetch(`${API_URL}/dashboard/resumen`, {
+            headers: { 'Authorization': `Bearer ${sesion.token}` } // <-- NUEVO: TOKEN
+        });
         if (response.ok) {
             const data = await response.json();
             
@@ -36,9 +38,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 async function cargarGraficas() {
+    const sesion = JSON.parse(localStorage.getItem('usuarioSesion')) || {};
+    const headers = { 'Authorization': `Bearer ${sesion.token}` }; // <-- NUEVO: TOKEN
+
     try {
         // Gráfica 1: Top 5 Libros
-        const resTop = await fetch(`${API_URL}/Dashboard/top-libros`);
+        const resTop = await fetch(`${API_URL}/Dashboard/top-libros`, { headers });
         if(resTop.ok) {
             const dataTop = await resTop.json();
             renderChartTopLibros(dataTop);
@@ -49,7 +54,7 @@ async function cargarGraficas() {
         }
 
         // Gráfica 2: Préstamos por Mes
-        const resMes = await fetch(`${API_URL}/Dashboard/prestamos-mes`);
+        const resMes = await fetch(`${API_URL}/Dashboard/prestamos-mes`, { headers });
         if(resMes.ok) {
             const dataMes = await resMes.json();
             renderChartPrestamosMes(dataMes);

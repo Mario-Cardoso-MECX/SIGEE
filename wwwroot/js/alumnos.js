@@ -77,7 +77,10 @@ async function cargarAlumnos() {
     const puedeEditar = rol === 'Admin' || rol === 'Secretaria';
 
     try {
-        const response = await fetch(`${API_URL}/Usuarios/alumnos`);
+        // --- NUEVO: AGREGAMOS EL TOKEN DE SEGURIDAD ---
+        const response = await fetch(`${API_URL}/Usuarios/alumnos`, {
+            headers: { 'Authorization': `Bearer ${sesion.token}` }
+        });
         if (!response.ok) throw new Error("Error al obtener alumnos");
 
         const alumnos = await response.json();
@@ -185,10 +188,15 @@ async function registrarAlumno() {
         didOpen: () => { Swal.showLoading(); }
     });
 
+    const sesion = JSON.parse(localStorage.getItem('usuarioSesion')) || {};
+
     try {
         const response = await fetch(url, {
             method: metodo,
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${sesion.token}` // <-- NUEVO: TOKEN JWT
+            },
             body: JSON.stringify({ nombre: nombre, apellidos: apellidos, grupo: `${grado} ${grupoLetra}` })
         });
 
@@ -248,8 +256,12 @@ async function eliminarAlumno(id) {
     });
 
     if (confirmacion.isConfirmed) {
+        const sesion = JSON.parse(localStorage.getItem('usuarioSesion')) || {};
         try {
-            const response = await fetch(`${API_URL}/Usuarios/${id}`, { method: 'DELETE' });
+            const response = await fetch(`${API_URL}/Usuarios/${id}`, { 
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${sesion.token}` } // <-- NUEVO: TOKEN
+            });
             if (response.ok) {
                 Swal.fire({ title: '¡Eliminado!', text: 'El alumno ha sido borrado correctamente.', icon: 'success', confirmButtonColor: '#27ae60' });
                 cargarAlumnos();
@@ -368,8 +380,12 @@ async function promoverCicloEscolar() {
 
     if (confirmacion.isConfirmed) {
         Swal.fire({ title: 'Procesando...', text: 'Actualizando grupos de todos los alumnos, por favor espera.', allowOutsideClick: false, didOpen: () => { Swal.showLoading() } });
+        const sesion = JSON.parse(localStorage.getItem('usuarioSesion')) || {};
         try {
-            const response = await fetch(`${API_URL}/Usuarios/promocion-masiva`, { method: 'POST' });
+            const response = await fetch(`${API_URL}/Usuarios/promocion-masiva`, { 
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${sesion.token}` } // <-- NUEVO: TOKEN
+            });
             if (response.ok) {
                 const data = await response.json();
                 Swal.fire({ title: '¡Ciclo Actualizado!', text: data.mensaje, icon: 'success', confirmButtonColor: '#27ae60' });
@@ -389,8 +405,12 @@ async function eliminarEgresadosMasivo() {
 
     if (confirmacion.isConfirmed) {
         Swal.fire({ title: 'Limpiando base de datos...', didOpen: () => { Swal.showLoading() } });
+        const sesion = JSON.parse(localStorage.getItem('usuarioSesion')) || {};
         try {
-            const response = await fetch(`${API_URL}/Usuarios/eliminar-egresados`, { method: 'DELETE' });
+            const response = await fetch(`${API_URL}/Usuarios/eliminar-egresados`, { 
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${sesion.token}` } // <-- NUEVO: TOKEN
+            });
             const data = await response.json();
             
             if (response.ok) {
@@ -405,8 +425,11 @@ async function eliminarEgresadosMasivo() {
 async function verHistorialAlumno(id, nombre) {
     Swal.fire({ title: `Cargando historial de ${nombre}...`, allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
 
+    const sesion = JSON.parse(localStorage.getItem('usuarioSesion')) || {};
     try {
-        const response = await fetch(`${API_URL}/Prestamos/historial-alumno/${id}`);
+        const response = await fetch(`${API_URL}/Prestamos/historial-alumno/${id}`, {
+            headers: { 'Authorization': `Bearer ${sesion.token}` } // <-- NUEVO: TOKEN
+        });
         if (!response.ok) throw new Error("Error al obtener historial");
         const datos = await response.json();
 
@@ -460,9 +483,15 @@ async function procesarSubidaFoto(input) {
     formData.append('foto', file);
 
     Swal.fire({ title: 'Subiendo foto...', didOpen: () => { Swal.showLoading() } });
+    
+    const sesion = JSON.parse(localStorage.getItem('usuarioSesion')) || {};
 
     try {
-        const response = await fetch(`${API_URL}/Usuarios/subir-foto/${matricula}`, { method: 'POST', body: formData });
+        const response = await fetch(`${API_URL}/Usuarios/subir-foto/${matricula}`, { 
+            method: 'POST', 
+            body: formData,
+            headers: { 'Authorization': `Bearer ${sesion.token}` } // <-- NUEVO: TOKEN
+        });
         const data = await response.json();
 
         if (response.ok) {
@@ -547,8 +576,12 @@ async function sincronizarFotosMasivas() {
 
     if (confirmacion.isConfirmed) {
         Swal.fire({ title: 'Sincronizando...', text: 'Buscando fotos y vinculando matrículas, no cierres esta ventana.', allowOutsideClick: false, didOpen: () => { Swal.showLoading() } });
+        const sesion = JSON.parse(localStorage.getItem('usuarioSesion')) || {};
         try {
-            const response = await fetch(`${API_URL}/Usuarios/sincronizar-fotos`, { method: 'POST' });
+            const response = await fetch(`${API_URL}/Usuarios/sincronizar-fotos`, { 
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${sesion.token}` } // <-- NUEVO: TOKEN
+            });
             const data = await response.json();
             if (response.ok) {
                 Swal.fire({ title: '¡Sincronización Completa!', html: `<b>${data.vinculadas}</b> fotos vinculadas con éxito.<br><b>${data.ignoradas}</b> fotos ignoradas (no hay alumnos con esa matrícula).`, icon: 'success', confirmButtonColor: '#27ae60' });

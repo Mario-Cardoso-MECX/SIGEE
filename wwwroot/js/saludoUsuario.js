@@ -25,7 +25,9 @@ document.addEventListener("DOMContentLoaded", () => {
             badge.onmouseout = () => badge.style.opacity = "1";
 
             // Consultar si tiene foto para cambiar el icono default
-            fetch(`${API_URL}/Usuarios/${sesion.id}`)
+            fetch(`${API_URL}/Usuarios/${sesion.id}`, {
+                headers: { 'Authorization': `Bearer ${sesion.token}` } // <-- NUEVO: TOKEN
+            })
                 .then(res => res.json())
                 .then(user => {
                     if (user.fotoUrl && user.fotoUrl !== 'null' && user.fotoUrl !== '') {
@@ -60,7 +62,9 @@ async function abrirPerfil() {
     // Obtenemos los datos frescos del servidor
     let userDb = null;
     try {
-        const res = await fetch(`${API_URL}/Usuarios/${sesion.id}`);
+        const res = await fetch(`${API_URL}/Usuarios/${sesion.id}`, {
+            headers: { 'Authorization': `Bearer ${sesion.token}` } // <-- NUEVO: TOKEN
+        });
         userDb = await res.json();
     } catch(e) { 
         Swal.fire('Error', 'No se pudieron cargar los datos del perfil.', 'error');
@@ -132,7 +136,8 @@ async function abrirPerfil() {
                 formData.append('foto', formValues.file);
                 const resFoto = await fetch(`${API_URL}/Usuarios/subir-foto-personal/${formValues.username}`, {
                     method: 'POST',
-                    body: formData
+                    body: formData,
+                    headers: { 'Authorization': `Bearer ${sesion.token}` } // <-- NUEVO: TOKEN
                 });
                 if (!resFoto.ok) throw new Error("Error al subir la imagen. Verifica el formato.");
             }
@@ -141,7 +146,10 @@ async function abrirPerfil() {
             if (formValues.passActual && formValues.passNueva) {
                 const resPass = await fetch(`${API_URL}/Usuarios/cambiar-password`, {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${sesion.token}` // <-- NUEVO: TOKEN
+                    },
                     body: JSON.stringify({
                         username: formValues.username,
                         passwordActual: formValues.passActual,
