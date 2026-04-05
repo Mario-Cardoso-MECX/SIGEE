@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization; // <--- NUEVO: LIBRERÍA PARA OCULTAR DATOS EN EL JSON
 
 namespace GestorInventarioPrimaria.Models
 {
@@ -21,6 +22,7 @@ namespace GestorInventarioPrimaria.Models
         [MaxLength(50)]
         public string? Username { get; set; } // Solo para Directores/Maestros  
 
+        [JsonIgnore] // <--- NUEVO: ESTO EVITA QUE LA CONTRASEÑA VIAJE A POSTMAN O AL NAVEGADOR
         public string? PasswordHash { get; set; } // Solo para Directores/Maestros
 
         [MaxLength(20)]
