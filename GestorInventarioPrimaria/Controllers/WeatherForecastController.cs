@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization; // <-- NUEVO: SEGURIDAD
 
 namespace GestorInventarioPrimaria.Controllers
 {
+    [Authorize] // <-- NUEVO: CANDADO
     [ApiController]
     [Route("[controller]")]
     public class WeatherForecastController : ControllerBase

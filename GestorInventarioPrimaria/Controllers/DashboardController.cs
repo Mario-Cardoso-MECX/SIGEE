@@ -3,9 +3,11 @@ using Microsoft.EntityFrameworkCore;
 using GestorInventarioPrimaria.Data;
 using System.Linq; 
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization; // <-- NUEVO: SEGURIDAD
 
 namespace GestorInventarioPrimaria.Controllers
 {
+    [Authorize] // <-- NUEVO: CANDADO
     [Route("api/[controller]")]
     [ApiController]
     public class DashboardController : ControllerBase

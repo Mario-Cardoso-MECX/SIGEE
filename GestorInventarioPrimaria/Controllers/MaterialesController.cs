@@ -2,9 +2,11 @@
 using Microsoft.EntityFrameworkCore;
 using GestorInventarioPrimaria.Data;
 using GestorInventarioPrimaria.Models;
+using Microsoft.AspNetCore.Authorization; // <-- NUEVO: SEGURIDAD
 
 namespace GestorInventarioPrimaria.Controllers
 {
+    [Authorize] // <-- NUEVO: CANDADO
     [Route("api/[controller]")]
     [ApiController]
     public class MaterialesController : ControllerBase

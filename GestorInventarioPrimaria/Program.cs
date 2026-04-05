@@ -1,6 +1,9 @@
 using GestorInventarioPrimaria.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders; // <-- NECESARIO PARA LAS RUTAS DE ARCHIVOS
+using Microsoft.AspNetCore.Authentication.JwtBearer; // <-- NUEVO: SEGURIDAD JWT
+using Microsoft.IdentityModel.Tokens; // <-- NUEVO: SEGURIDAD JWT
+using System.Text; // <-- NUEVO: SEGURIDAD JWT
 using System.IO;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -28,6 +31,23 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 // ------------------------------------------------
 
+// --- NUEVO: CONFIGURACIÓN SEGURIDAD (JWT) ---
+var secretKey = "SIGEE_Super_Secret_Key_Para_Primaria_2026_ExtremadamenteLarga"; 
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = false,
+            ValidateAudience = false,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey))
+        };
+    });
+builder.Services.AddAuthorization();
+// ---------------------------------------------
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("PermitirTodo", policy =>
@@ -51,6 +71,10 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// --- NUEVO: ACTIVAR LOS CANDADOS EN EL SERVIDOR ---
+app.UseAuthentication(); 
+// ---------------------------------------------------
 
 // --- CONFIGURACIÓN PARA ARCHIVOS ESTÁTICOS (LAS FOTOS Y EL FRONTEND) ---
 

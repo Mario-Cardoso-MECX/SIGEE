@@ -2,10 +2,12 @@
 using Microsoft.EntityFrameworkCore;
 using GestorInventarioPrimaria.Data;
 using GestorInventarioPrimaria.Models;
+using Microsoft.AspNetCore.Authorization; // <-- NUEVO: SEGURIDAD
 using System.IO;
 
 namespace GestorInventarioPrimaria.Controllers
 {
+    [Authorize] // <-- NUEVO: ESTE ES EL CANDADO PARA QUE NO ENTREN POR TERMUX NI POSTMAN
     [Route("api/[controller]")]
     [ApiController]
     public class UsuariosController : ControllerBase
@@ -69,7 +71,9 @@ namespace GestorInventarioPrimaria.Controllers
 
             nuevoAlumno.Matricula = $"{anioActual}-{consecutivo:D3}";
             nuevoAlumno.Rol = "Alumno";
-            nuevoAlumno.PasswordHash = "1234";
+            
+            // --- NUEVO: HASHEAR LA CONTRASEÑA EN LUGAR DE TEXTO PLANO ---
+            nuevoAlumno.PasswordHash = BCrypt.Net.BCrypt.HashPassword("1234");
 
             _context.Usuarios.Add(nuevoAlumno);
             await _context.SaveChangesAsync();
@@ -193,6 +197,9 @@ namespace GestorInventarioPrimaria.Controllers
             nuevoPersonal.Matricula = $"PER-{anioActual}-{consecutivo:D3}";
             nuevoPersonal.Grupo = string.Empty;
 
+            // --- NUEVO: ENCRIPTAR LA CONTRASEÑA ---
+            nuevoPersonal.PasswordHash = BCrypt.Net.BCrypt.HashPassword(nuevoPersonal.PasswordHash);
+
             _context.Usuarios.Add(nuevoPersonal);
             await _context.SaveChangesAsync();
             return Ok(new { mensaje = "Usuario registrado con éxito", matricula = nuevoPersonal.Matricula });
@@ -217,7 +224,11 @@ namespace GestorInventarioPrimaria.Controllers
             usuarioDb.Username = datosActualizados.Username;
             usuarioDb.Rol = datosActualizados.Rol;
 
-            if (!string.IsNullOrWhiteSpace(datosActualizados.PasswordHash)) usuarioDb.PasswordHash = datosActualizados.PasswordHash;
+            // --- NUEVO: ENCRIPTAR LA CONTRASEÑA SI LA ACTUALIZARON ---
+            if (!string.IsNullOrWhiteSpace(datosActualizados.PasswordHash))
+            {
+                usuarioDb.PasswordHash = BCrypt.Net.BCrypt.HashPassword(datosActualizados.PasswordHash);
+            }
 
             await _context.SaveChangesAsync();
             return Ok(new { mensaje = "✅ Datos actualizados correctamente." });
@@ -412,10 +423,22 @@ namespace GestorInventarioPrimaria.Controllers
             var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Username == datos.Username);
             if (usuario == null) return NotFound(new { mensaje = "Usuario no encontrado." });
 
-            if (usuario.PasswordHash != datos.PasswordActual)
+            // --- NUEVO: VERIFICACIÓN HIBRIDA ---
+            bool passwordCorrecta = false;
+            if (usuario.PasswordHash.StartsWith("$2")) 
+            {
+                passwordCorrecta = BCrypt.Net.BCrypt.Verify(datos.PasswordActual, usuario.PasswordHash);
+            }
+            else 
+            {
+                passwordCorrecta = (usuario.PasswordHash == datos.PasswordActual);
+            }
+
+            if (!passwordCorrecta)
                 return BadRequest(new { mensaje = "La contraseña actual es incorrecta." });
 
-            usuario.PasswordHash = datos.PasswordNueva;
+            // ENCRIPTAR LA NUEVA
+            usuario.PasswordHash = BCrypt.Net.BCrypt.HashPassword(datos.PasswordNueva);
             await _context.SaveChangesAsync();
 
             return Ok(new { mensaje = "Contraseña actualizada correctamente." });

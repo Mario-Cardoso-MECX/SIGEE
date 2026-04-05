@@ -3,9 +3,11 @@ using GestorInventarioPrimaria.DTOs;
 using GestorInventarioPrimaria.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization; // <-- NUEVO: SEGURIDAD
 
 namespace GestorInventarioPrimaria.Controllers
 {
+    [Authorize] // <-- NUEVO: CANDADO
     [Route("api/[controller]")]
     [ApiController]
     public class PrestamosController : ControllerBase
