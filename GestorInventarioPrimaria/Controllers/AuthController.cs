@@ -28,29 +28,22 @@ namespace GestorInventarioPrimaria.Controllers
             var usuario = await _context.Usuarios
                 .FirstOrDefaultAsync(u => u.Username == request.Username && u.Rol != "Alumno");
 
-            if (usuario == null)
+            // Si el usuario no existe, o si su contraseña en la BD no empieza con "$2a" (no es un hash válido de BCrypt)
+            if (usuario == null || string.IsNullOrEmpty(usuario.PasswordHash) || !usuario.PasswordHash.StartsWith("$2"))
             {
                 return Unauthorized(new { mensaje = "Usuario o contraseña incorrectos." });
             }
 
-            // --- NUEVO: VERIFICACIÓN HIBRIDA (SOPORTA HASH Y TEXTO PLANO) ---
-            bool passwordCorrecta = false;
-            if (usuario.PasswordHash.StartsWith("$2")) // BCrypt
-            {
-                passwordCorrecta = BCrypt.Net.BCrypt.Verify(request.Password, usuario.PasswordHash);
-            }
-            else // Texto plano original
-            {
-                passwordCorrecta = (usuario.PasswordHash == request.Password);
-            }
+            // --- VERIFICACIÓN ESTRICTA (SOLO ACEPTA HASHES BCRYPT) ---
+            bool passwordCorrecta = BCrypt.Net.BCrypt.Verify(request.Password, usuario.PasswordHash);
 
             if (!passwordCorrecta)
             {
                 return Unauthorized(new { mensaje = "Usuario o contraseña incorrectos." });
             }
-            // ----------------------------------------------------------------
+            // ---------------------------------------------------------
 
-            // --- NUEVO: GENERAR EL TOKEN JWT DE SEGURIDAD ---
+            // --- GENERAR EL TOKEN JWT DE SEGURIDAD ---
             var tokenHandler = new JwtSecurityTokenHandler();
             var key = Encoding.UTF8.GetBytes("SIGEE_Super_Secret_Key_Para_Primaria_2026_ExtremadamenteLarga");
             var tokenDescriptor = new SecurityTokenDescriptor
@@ -80,12 +73,12 @@ namespace GestorInventarioPrimaria.Controllers
                 apellidos = usuario.Apellidos,
                 username = usuario.Username,
                 rol = usuario.Rol,
-                token = jwtString, // <-- NUEVO: MANDAMOS EL JWT PARA PROTEGER LA API
+                token = jwtString, // <-- MANDAMOS EL JWT PARA PROTEGER LA API
                 tokenUnicoDb = usuario.TokenSesion // Mantenemos tu magia original
             });
         }
 
-        // --- NUEVO: ENDPOINT PARA VIGILAR SI LA SESIÓN SIGUE SIENDO VÁLIDA ---
+        // --- ENDPOINT PARA VIGILAR SI LA SESIÓN SIGUE SIENDO VÁLIDA ---
         [HttpGet("verificar-sesion")]
         public async Task<IActionResult> VerificarSesion([FromQuery] string username, [FromQuery] string token)
         {
