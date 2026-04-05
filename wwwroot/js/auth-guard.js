@@ -36,8 +36,9 @@
 
         // --- VIGILANTE DE SESIONES ÚNICAS (TOKEN) ---
         function vigilarSesion() {
-            if (typeof API_URL !== 'undefined' && sesion.username && sesion.token) {
-                fetch(`${API_URL}/Auth/verificar-sesion?username=${sesion.username}&token=${sesion.token}`)
+            // MODIFICADO: Cambiamos sesion.token por sesion.sesionUnica porque el 'token' ahora es el JWT de seguridad
+            if (typeof API_URL !== 'undefined' && sesion.username && sesion.sesionUnica) {
+                fetch(`${API_URL}/Auth/verificar-sesion?username=${sesion.username}&token=${sesion.sesionUnica}`)
                     .then(response => {
                         if (response.status === 401) {
                             // Alguien más entró con esta cuenta. Lo sacamos.
