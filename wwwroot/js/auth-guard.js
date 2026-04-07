@@ -16,9 +16,7 @@
         
         function resetTimer() {
             clearTimeout(tiempoInactividad);
-            // Para 5 minutos estaba en 300000
-            tiempoInactividad = setTimeout(cerrarSesionPorInactividad, 300000); // 600,000 ms = 10 minutos
-            // o si prefieres 15 minutos usa: 900000 
+            tiempoInactividad = setTimeout(cerrarSesionPorInactividad, 300000); // 300,000 ms = 5 minutos
         }
 
         function cerrarSesionPorInactividad() {
@@ -36,9 +34,10 @@
 
         // --- VIGILANTE DE SESIONES ÚNICAS (TOKEN) ---
         function vigilarSesion() {
-            // MODIFICADO: Cambiamos sesion.token por sesion.sesionUnica porque el 'token' ahora es el JWT de seguridad
-            if (typeof API_URL !== 'undefined' && sesion.username && sesion.sesionUnica) {
-                fetch(`${API_URL}/Auth/verificar-sesion?username=${sesion.username}&token=${sesion.sesionUnica}`)
+            // CORRECCIÓN AQUÍ: Ahora buscamos "sesion.tokenUnicoDb" que es el que manda C#
+            if (typeof API_URL !== 'undefined' && sesion.username && sesion.tokenUnicoDb) {
+                // Hacemos el ping a C# enviando el tokenUnicoDb real
+                fetch(`${API_URL}/Auth/verificar-sesion?username=${sesion.username}&token=${sesion.tokenUnicoDb}`)
                     .then(response => {
                         if (response.status === 401) {
                             // Alguien más entró con esta cuenta. Lo sacamos.
