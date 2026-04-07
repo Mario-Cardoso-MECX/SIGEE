@@ -64,6 +64,14 @@ namespace GestorInventarioPrimaria.Controllers
                 return BadRequest(new { mensaje = $"❌ Error: No encontramos tu cuenta ({dto.Matricula}) en la base de datos." });
             }
 
+            // =================================================================
+            // --- EL CANDADO FINAL (EXCLUIR A INVENTARIO TOTALMENTE) ---
+            if (usuario.Rol != "Docente" && usuario.Rol != "Admin" && usuario.Rol != "Secretaria")
+            {
+                return BadRequest(new { mensaje = "❌ Acceso denegado: El personal de Inventario no puede apartar el Aula de Medios." });
+            }
+            // =================================================================
+
             bool hayEmpalme = await _context.ReservasAula.AnyAsync(r =>
                 r.Fecha.Date == dto.Fecha.Date &&
                 r.Estatus != "Rechazada" &&
@@ -76,14 +84,23 @@ namespace GestorInventarioPrimaria.Controllers
                 return BadRequest(new { mensaje = "❌ El horario seleccionado ya está ocupado o en revisión." });
             }
 
+            // =================================================================
+            // --- NUEVO: AUTO-APROBACIÓN PARA DIRECTORA Y SECRETARIA ---
+            string estatusInicial = "Pendiente";
+            if (usuario.Rol == "Admin" || usuario.Rol == "Secretaria")
+            {
+                estatusInicial = "Aprobada";
+            }
+            // =================================================================
+
             var nuevaReserva = new ReservaAula
             {
                 UsuarioId = usuario.Id,
                 Fecha = dto.Fecha,
                 HoraInicio = dto.HoraInicio,
                 HoraFin = dto.HoraFin,
-                Estatus = "Pendiente",
-                Motivo = string.IsNullOrEmpty(dto.Motivo) ? "Clase regular" : dto.Motivo
+                Estatus = estatusInicial, // <-- Usamos la variable para ver si entró como pendiente o aprobada
+                Motivo = string.IsNullOrEmpty(dto.Motivo) ? "Clase regular / Junta" : dto.Motivo
             };
 
             _context.ReservasAula.Add(nuevaReserva);

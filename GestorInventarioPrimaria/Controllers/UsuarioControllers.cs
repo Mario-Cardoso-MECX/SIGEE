@@ -24,10 +24,18 @@ namespace GestorInventarioPrimaria.Controllers
         [HttpGet("alumnos")]
         public async Task<ActionResult<IEnumerable<Usuario>>> GetAlumnos()
         {
-            return await _context.Usuarios
+            var alumnos = await _context.Usuarios
                                  .Where(u => u.Rol == "Alumno")
                                  .OrderBy(u => u.Matricula)
                                  .ToListAsync();
+
+            // --- MAGIA: OCULTAMOS LOS HASHES ANTES DE ENVIAR A POSTMAN/WEB ---
+            foreach (var alumno in alumnos)
+            {
+                alumno.PasswordHash = null;
+            }
+
+            return alumnos;
         }
 
         [HttpGet("buscar")]
@@ -35,10 +43,18 @@ namespace GestorInventarioPrimaria.Controllers
         {
             if (string.IsNullOrWhiteSpace(termino)) return Ok(new List<Usuario>());
 
-            return await _context.Usuarios
+            var usuarios = await _context.Usuarios
                 .Where(u => u.Nombre.Contains(termino) || u.Matricula.Contains(termino))
                 .Take(5) 
                 .ToListAsync();
+
+            // --- MAGIA: OCULTAMOS LOS HASHES ANTES DE ENVIAR A POSTMAN/WEB ---
+            foreach (var usuario in usuarios)
+            {
+                usuario.PasswordHash = null;
+            }
+
+            return usuarios;
         }
 
         [HttpPost("crear")]
@@ -168,7 +184,15 @@ namespace GestorInventarioPrimaria.Controllers
         [HttpGet("personal")]
         public async Task<ActionResult<IEnumerable<Usuario>>> GetPersonalAdministrativo()
         {
-            return await _context.Usuarios.Where(u => u.Rol != "Alumno").OrderBy(u => u.Rol).ThenBy(u => u.Nombre).ToListAsync();
+            var personal = await _context.Usuarios.Where(u => u.Rol != "Alumno").OrderBy(u => u.Rol).ThenBy(u => u.Nombre).ToListAsync();
+
+            // --- MAGIA: OCULTAMOS LOS HASHES ANTES DE ENVIAR A POSTMAN/WEB ---
+            foreach (var p in personal)
+            {
+                p.PasswordHash = null;
+            }
+
+            return personal;
         }
 
         [HttpPost("crear-personal")]
@@ -210,6 +234,10 @@ namespace GestorInventarioPrimaria.Controllers
         {
             var usuario = await _context.Usuarios.FindAsync(id);
             if (usuario == null) return NotFound(new { mensaje = "Usuario no encontrado." });
+
+            // --- MAGIA: OCULTAMOS EL HASH ANTES DE ENVIARLO ---
+            usuario.PasswordHash = null;
+
             return usuario;
         }
 

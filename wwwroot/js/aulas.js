@@ -4,10 +4,53 @@ document.addEventListener('DOMContentLoaded', () => {
     if(txtFecha) txtFecha.setAttribute('min', hoy);
 
     const sesion = JSON.parse(localStorage.getItem('usuarioSesion')) || {};
-    if (sesion.rol === 'Admin' || sesion.rol === 'Secretaria') {
-        const panel = document.getElementById('panelSolicitud');
-        if(panel) panel.style.display = 'none';
+    const panel = document.getElementById('panelSolicitud');
+
+    // --- NUEVO: RESTRICCIONES VISUALES SEGÚN ROL ---
+    if(panel) {
+        if (sesion.rol === 'Inventario') {
+            // El de inventario no tiene nada que hacer aquí. Desaparecemos el panel completo.
+            panel.style.display = 'none';
+        } 
+        else if (sesion.rol === 'Admin' || sesion.rol === 'Secretaria') {
+            // Las jefas ven el formulario oculto con el botón de Acordeón
+            panel.style.display = 'none';
+            
+            // Creamos un botón elegante para mostrarlo/ocultarlo
+            const btnToggle = document.createElement('button');
+            btnToggle.innerHTML = '<i class="fas fa-calendar-plus"></i> Nueva Reserva';
+            btnToggle.className = 'btn-toggle-reserva';
+            
+            // Estilos del botón
+            btnToggle.style.backgroundColor = '#2c3e50';
+            btnToggle.style.color = 'white';
+            btnToggle.style.padding = '10px 20px';
+            btnToggle.style.border = 'none';
+            btnToggle.style.borderRadius = '5px';
+            btnToggle.style.cursor = 'pointer';
+            btnToggle.style.marginBottom = '20px';
+            btnToggle.style.fontSize = '16px';
+            btnToggle.style.display = 'block';
+
+            // Insertamos el botón justo antes del formulario
+            panel.parentNode.insertBefore(btnToggle, panel);
+
+            // Funcionalidad de abrir/cerrar
+            btnToggle.addEventListener('click', () => {
+                if (panel.style.display === 'none') {
+                    panel.style.display = 'block';
+                    btnToggle.innerHTML = '<i class="fas fa-times"></i> Cancelar Reserva';
+                    btnToggle.style.backgroundColor = '#e74c3c';
+                } else {
+                    panel.style.display = 'none';
+                    btnToggle.innerHTML = '<i class="fas fa-calendar-plus"></i> Nueva Reserva';
+                    btnToggle.style.backgroundColor = '#2c3e50';
+                }
+            });
+        }
+        // Si es 'Docente', no entra en los IFs de arriba y el formulario se muestra normal.
     }
+    // ---------------------------------------------------------------------------------
 
     cargarReservas();
 });
@@ -158,8 +201,25 @@ async function solicitarReserva() {
         }
 
         const data = await response.json();
-        Swal.fire('¡Éxito!', data.mensaje, 'success');
+        
+        // --- NUEVO: APROBACIÓN AUTOMÁTICA PARA ADMINS EN EL FRONTEND ---
+        if (sesion.rol === 'Admin' || sesion.rol === 'Secretaria') {
+            Swal.fire('¡Éxito!', 'Tu reserva ha sido aprobada automáticamente por tener permisos de Administrador.', 'success');
+        } else {
+            Swal.fire('¡Éxito!', data.mensaje, 'success');
+        }
+
         document.getElementById('formReservaAula').reset();
+        
+        // --- NUEVO: Ocultar formulario de nuevo si usamos el acordeón ---
+        const panel = document.getElementById('panelSolicitud');
+        const btnToggle = document.querySelector('.btn-toggle-reserva');
+        if ((sesion.rol === 'Admin' || sesion.rol === 'Secretaria') && panel && btnToggle) {
+             panel.style.display = 'none';
+             btnToggle.innerHTML = '<i class="fas fa-calendar-plus"></i> Nueva Reserva';
+             btnToggle.style.backgroundColor = '#2c3e50';
+        }
+
         cargarReservas();
         
     } catch(e) {
