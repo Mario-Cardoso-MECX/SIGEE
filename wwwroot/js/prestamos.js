@@ -165,11 +165,22 @@ async function realizarPrestamo() {
 
 /**
  * 3. DEVOLVER MATERIAL (PUT)
+ * MAGIA: Ahora recibe la categoría para saber si pedir credencial o no.
  */
-async function devolverMaterial(idReserva) {
+async function devolverMaterial(idReserva, categoria) {
+    // Texto por defecto (Biblioteca o Salón)
+    let textoAlerta = "El stock volverá a estar disponible.";
+    let tituloAlerta = '¿Confirmar devolución?';
+
+    // Si es Deportes, cambiamos el texto y lo ponemos urgente
+    if (categoria === "Material Deportivo") {
+        tituloAlerta = '¡Atención: Devolución de Deportes!';
+        textoAlerta = "El stock volverá a estar disponible. <br><br> <b><span style='color: #e74c3c; font-size: 1.1rem;'>¡NO OLVIDES DEVOLVER SU CREDENCIAL FÍSICA!</span></b>";
+    }
+
     const confirmacion = await Swal.fire({
-        title: '¿Confirmar devolución?',
-        text: "El stock volverá a estar disponible. ¡NO OLVIDES DEVOLVER SU CREDENCIAL!", // REQ-11
+        title: tituloAlerta,
+        html: textoAlerta, // Cambiado de 'text' a 'html' para soportar colores y negritas
         icon: 'question',
         showCancelButton: true,
         confirmButtonColor: '#27ae60', 
@@ -226,13 +237,20 @@ function renderizarTabla(lista) {
         const esAtrasado = hoy > fechaLimite;
         const horaFormateada = fechaLimite.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
+        // MAGIA: Pasamos la categoría 'item.categoria' a la función devolverMaterial.
+        // Reemplazamos las comillas simples por dobles escapadas en la categoría para evitar errores de sintaxis si el nombre tiene acentos.
+        const catSegura = (item.categoria || "").replace(/'/g, "\\'"); 
+        
         const btnDevolver = puedeGestionar 
-            ? `<button onclick="devolverMaterial(${item.idReserva})" class="btn-rojo">Devolver</button>`
+            ? `<button onclick="devolverMaterial(${item.idReserva}, '${catSegura}')" class="btn-rojo">Devolver</button>`
             : `<span style="color:gray; font-size:0.85rem;">Solo lectura</span>`;
 
         const fila = `
             <tr style="${esAtrasado ? 'background-color: #fef2f2;' : ''}">
-                <td><strong>${item.material}</strong></td>
+                <td>
+                    <strong>${item.material}</strong><br>
+                    <small style="color: #7f8c8d;">${item.categoria}</small>
+                </td>
                 <td style="color: ${esAtrasado ? '#dc2626' : 'inherit'}; font-weight: ${esAtrasado ? 'bold' : 'normal'}">
                     ${item.fechaFin} - <strong>${horaFormateada}</strong> 
                     ${esAtrasado ? '<br>⚠️ ATRASADO' : ''}

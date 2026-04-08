@@ -116,6 +116,8 @@ namespace GestorInventarioPrimaria.Controllers
                                   {
                                       IdReserva = r.Id,
                                       Material = r.Material.Titulo,
+                                      // --- SOLUCIÓN DEL BUG: AHORA SÍ ENVIAMOS LA CATEGORÍA AL FRONTEND ---
+                                      Categoria = r.Material.Categoria, 
                                       FechaInicio = r.FechaInicio.ToShortDateString(),
                                       FechaFin = r.FechaFinEsperada.ToShortDateString(),
                                       FechaFinRaw = r.FechaFinEsperada
