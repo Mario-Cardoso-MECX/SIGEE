@@ -26,7 +26,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             // Consultar si tiene foto para cambiar el icono default
             fetch(`${API_URL}/Usuarios/${sesion.id}`, {
-                headers: { 'Authorization': `Bearer ${sesion.token}` } // <-- NUEVO: TOKEN
+                headers: { 'Authorization': `Bearer ${sesion.token}` }
             })
                 .then(res => res.json())
                 .then(user => {
@@ -37,7 +37,6 @@ document.addEventListener("DOMContentLoaded", () => {
                         if(iconoViejo) iconoViejo.remove();
                         
                         const img = document.createElement('img');
-                        // <-- MAGIA: Inyectamos el ?t=tokenUnicoDb (y un salt de tiempo extra para que no haga caché al cambiarla)
                         img.src = baseUrl + user.fotoUrl + `?t=${sesion.tokenUnicoDb}&cache=${new Date().getTime()}`; 
                         img.style.width = '35px';
                         img.style.height = '35px';
@@ -63,7 +62,7 @@ async function abrirPerfil() {
     let userDb = null;
     try {
         const res = await fetch(`${API_URL}/Usuarios/${sesion.id}`, {
-            headers: { 'Authorization': `Bearer ${sesion.token}` } // <-- NUEVO: TOKEN
+            headers: { 'Authorization': `Bearer ${sesion.token}` }
         });
         userDb = await res.json();
     } catch(e) { 
@@ -74,7 +73,6 @@ async function abrirPerfil() {
     let fotoActual = 'https://ui-avatars.com/api/?name=' + userDb.nombre.replace(/ /g, '+') + '&background=cbd5e1&color=475569';
     if (userDb.fotoUrl && userDb.fotoUrl !== 'null' && userDb.fotoUrl !== '') {
         const baseUrl = API_URL.endsWith('/api') ? API_URL.replace('/api', '') : API_URL.substring(0, API_URL.indexOf('/api'));
-        // <-- MAGIA: Inyectamos el ?t=tokenUnicoDb en la previsualización
         fotoActual = baseUrl + userDb.fotoUrl + `?t=${sesion.tokenUnicoDb}&cache=${new Date().getTime()}`;
     }
 
@@ -147,7 +145,7 @@ async function abrirPerfil() {
                 const resFoto = await fetch(`${API_URL}/Usuarios/subir-foto-personal/${formValues.username}`, {
                     method: 'POST',
                     body: formData,
-                    headers: { 'Authorization': `Bearer ${sesion.token}` } // <-- NUEVO: TOKEN
+                    headers: { 'Authorization': `Bearer ${sesion.token}` }
                 });
                 if (!resFoto.ok) throw new Error("Error al subir la imagen. Verifica el formato.");
             }
@@ -158,7 +156,7 @@ async function abrirPerfil() {
                     method: 'PUT',
                     headers: { 
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${sesion.token}` // <-- NUEVO: TOKEN
+                        'Authorization': `Bearer ${sesion.token}`
                     },
                     body: JSON.stringify({
                         username: formValues.username,
@@ -173,8 +171,8 @@ async function abrirPerfil() {
                 }
             }
 
-            // 🔥 ALERTA 2: ÉXITO (2 SEGUNDOS)
-            Swal.fire({
+            // ✅ CORRECCIÓN: await agregado para que respete los 2 segundos
+            await Swal.fire({
                 title: '¡Perfil Actualizado!',
                 text: 'Tus datos se guardaron correctamente.',
                 icon: 'success',
@@ -182,9 +180,6 @@ async function abrirPerfil() {
                 timer: 2000,
                 timerProgressBar: true
             });
-
-            // ⏱️ FORZAR que se quede visible los 2 segundos reales
-            await new Promise(resolve => setTimeout(resolve, 2000));
 
             // 🔥 ACTUALIZAR FOTO EN VIVO 🔥
             if (formValues.file) {
