@@ -508,9 +508,13 @@ function mostrarCredencial(nombre, matricula, grupo, fotoUrl) {
     document.getElementById('credGrupo').innerText = grupo || "N/A";
     const imgFoto = document.getElementById('credFoto');
     
+    // <-- MAGIA: Traemos la sesión para el ?t=
+    const sesion = JSON.parse(localStorage.getItem('usuarioSesion')) || {};
+
     if (fotoUrl && fotoUrl !== 'null' && fotoUrl !== '') {
         const baseUrl = API_URL.endsWith('/api') ? API_URL.replace('/api', '') : API_URL.substring(0, API_URL.indexOf('/api'));
-        imgFoto.src = baseUrl + fotoUrl;
+        // <-- INYECCIÓN QUIRÚRGICA DEL ?t=
+        imgFoto.src = baseUrl + fotoUrl + `?t=${sesion.tokenUnicoDb}`;
     } else {
         imgFoto.src = 'https://ui-avatars.com/api/?name=' + nombre.replace(/ /g, '+') + '&background=cbd5e1&color=475569&size=150';
     }
@@ -597,6 +601,9 @@ function imprimirCredencialesFiltradas() {
     let credencialesHTML = '';
     let count = 0;
 
+    // <-- MAGIA: Traemos la sesión para el ?t=
+    const sesion = JSON.parse(localStorage.getItem('usuarioSesion')) || {};
+
     filas.forEach(fila => {
         if (fila.style.display !== 'none' && fila.hasAttribute('data-matricula')) {
             const nombre = fila.getAttribute('data-nombre');
@@ -607,7 +614,8 @@ function imprimirCredencialesFiltradas() {
             let imgSrc = 'https://ui-avatars.com/api/?name=' + nombre.replace(/ /g, '+') + '&background=cbd5e1&color=475569&size=150';
             if (fotoUrl && fotoUrl !== 'null' && fotoUrl !== '') {
                 const baseUrl = API_URL.endsWith('/api') ? API_URL.replace('/api', '') : API_URL.substring(0, API_URL.indexOf('/api'));
-                imgSrc = baseUrl + fotoUrl;
+                // <-- INYECCIÓN QUIRÚRGICA DEL ?t=
+                imgSrc = baseUrl + fotoUrl + `?t=${sesion.tokenUnicoDb}`;
             }
 
             credencialesHTML += `

@@ -37,8 +37,8 @@ document.addEventListener("DOMContentLoaded", () => {
                         if(iconoViejo) iconoViejo.remove();
                         
                         const img = document.createElement('img');
-                        // Agregamos un timestamp para burlar el caché del navegador
-                        img.src = baseUrl + user.fotoUrl + "?t=" + new Date().getTime(); 
+                        // <-- MAGIA: Inyectamos el ?t=tokenUnicoDb (y un salt de tiempo extra para que no haga caché al cambiarla)
+                        img.src = baseUrl + user.fotoUrl + `?t=${sesion.tokenUnicoDb}&cache=${new Date().getTime()}`; 
                         img.style.width = '35px';
                         img.style.height = '35px';
                         img.style.borderRadius = '50%';
@@ -74,7 +74,8 @@ async function abrirPerfil() {
     let fotoActual = 'https://ui-avatars.com/api/?name=' + userDb.nombre.replace(/ /g, '+') + '&background=cbd5e1&color=475569';
     if (userDb.fotoUrl && userDb.fotoUrl !== 'null' && userDb.fotoUrl !== '') {
         const baseUrl = API_URL.endsWith('/api') ? API_URL.replace('/api', '') : API_URL.substring(0, API_URL.indexOf('/api'));
-        fotoActual = baseUrl + userDb.fotoUrl + "?t=" + new Date().getTime();
+        // <-- MAGIA: Inyectamos el ?t=tokenUnicoDb en la previsualización
+        fotoActual = baseUrl + userDb.fotoUrl + `?t=${sesion.tokenUnicoDb}&cache=${new Date().getTime()}`;
     }
 
     const { value: formValues } = await Swal.fire({

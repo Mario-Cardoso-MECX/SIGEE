@@ -97,7 +97,7 @@ namespace GestorInventarioPrimaria.Controllers
             return Ok(new { mensaje = "✅ Alumno registrado con éxito", matricula = nuevoAlumno.Matricula });
         }
 
-        // --- SUBIR FOTO ALUMNOS (FORZADO AL FRONTEND REAL) ---
+        // --- SUBIR FOTO ALUMNOS (FORZADO AL FRONTEND REAL - AHORA EN BÓVEDA PRIVADA) ---
         [HttpPost("subir-foto/{matricula}")]
         public async Task<IActionResult> SubirFotoAlumno(string matricula, IFormFile foto)
         {
@@ -111,16 +111,8 @@ namespace GestorInventarioPrimaria.Controllers
             if (ext != ".jpg" && ext != ".jpeg" && ext != ".png")
                 return BadRequest(new { mensaje = "Solo se permiten imágenes JPG o PNG." });
 
-            // MAGIA DE RUTAS: Salimos del backend ("..") y entramos a wwwroot
-            string carpetaBase = Path.GetFullPath(Path.Combine(_env.ContentRootPath, "..", "wwwroot"));
-            
-            // Si por alguna razón la de afuera no existe, usamos un respaldo
-            if (!Directory.Exists(carpetaBase))
-            {
-                 carpetaBase = Path.Combine(_env.ContentRootPath, "wwwroot");
-            }
-            
-            string carpetaDestino = Path.Combine(carpetaBase, "fotos_alumnos");
+            // --- NUEVO: GUARDAMOS EN ALMACÉN PRIVADO ---
+            string carpetaDestino = Path.Combine(_env.ContentRootPath, "AlmacenPrivado", "fotos_alumnos");
 
             // CREA LA CARPETA AUTOMÁTICAMENTE SI NO EXISTE
             if (!Directory.Exists(carpetaDestino))
@@ -141,7 +133,8 @@ namespace GestorInventarioPrimaria.Controllers
                 await foto.CopyToAsync(stream);
             }
 
-            alumno.FotoUrl = $"/fotos_alumnos/{nombreArchivo}";
+            // NUEVO: La URL apunta al endpoint seguro
+            alumno.FotoUrl = $"/api/Usuarios/foto/alumnos/{nombreArchivo}";
             await _context.SaveChangesAsync();
 
             return Ok(new { mensaje = "Foto subida y guardada correctamente.", fotoUrl = alumno.FotoUrl });
@@ -340,21 +333,14 @@ namespace GestorInventarioPrimaria.Controllers
             return Ok(new { mensaje = $"Limpieza completada. Se eliminaron {borrados} egresados sin deudas." + warning });
         }
 
-        // --- SINCRONIZAR FOTOS (FORZADO AL FRONTEND REAL) ---
+        // --- SINCRONIZAR FOTOS (FORZADO AL FRONTEND REAL - AHORA BÓVEDA) ---
         [HttpPost("sincronizar-fotos")]
         public async Task<IActionResult> SincronizarFotos()
         {
-            string carpetaBase = Path.GetFullPath(Path.Combine(_env.ContentRootPath, "..", "wwwroot"));
-            
-            if (!Directory.Exists(carpetaBase))
-            {
-                 carpetaBase = Path.Combine(_env.ContentRootPath, "wwwroot");
-            }
-
-            string carpetaDestino = Path.Combine(carpetaBase, "fotos_alumnos");
+            string carpetaDestino = Path.Combine(_env.ContentRootPath, "AlmacenPrivado", "fotos_alumnos");
 
             if (!Directory.Exists(carpetaDestino))
-                return BadRequest(new { mensaje = "No existe la carpeta 'fotos_alumnos' en tu frontend. Sube al menos una foto desde el sistema para que se cree automáticamente." });
+                return BadRequest(new { mensaje = "No existe la carpeta 'fotos_alumnos' en la bóveda. Sube al menos una foto desde el sistema para que se cree automáticamente." });
 
             var archivos = Directory.GetFiles(carpetaDestino);
             int vinculadas = 0;
@@ -369,7 +355,8 @@ namespace GestorInventarioPrimaria.Controllers
 
                 if (alumno != null)
                 {
-                    string nuevaRuta = $"/fotos_alumnos/{nombreConExt}";
+                    // NUEVO: La URL de API segura
+                    string nuevaRuta = $"/api/Usuarios/foto/alumnos/{nombreConExt}";
                     if (alumno.FotoUrl != nuevaRuta)
                     {
                         alumno.FotoUrl = nuevaRuta;
@@ -398,7 +385,7 @@ namespace GestorInventarioPrimaria.Controllers
         // --- ENDPOINTS PARA EL PERFIL DEL PERSONAL ---
         // =======================================================
 
-        // --- SUBIR FOTO PERSONAL (FORZADO AL FRONTEND REAL) ---
+        // --- SUBIR FOTO PERSONAL (FORZADO AL FRONTEND REAL - AHORA BÓVEDA) ---
         [HttpPost("subir-foto-personal/{username}")]
         public async Task<IActionResult> SubirFotoPersonal(string username, IFormFile foto)
         {
@@ -412,15 +399,8 @@ namespace GestorInventarioPrimaria.Controllers
             if (ext != ".jpg" && ext != ".jpeg" && ext != ".png")
                 return BadRequest(new { mensaje = "Solo se permiten imágenes JPG o PNG." });
 
-            string carpetaBase = Path.GetFullPath(Path.Combine(_env.ContentRootPath, "..", "wwwroot"));
-            
-            if (!Directory.Exists(carpetaBase))
-            {
-                 carpetaBase = Path.Combine(_env.ContentRootPath, "wwwroot");
-            }
-            
-            // CREA LA CARPETA AUTOMÁTICAMENTE SI NO EXISTE EN EL FRONTEND
-            string carpetaDestino = Path.Combine(carpetaBase, "fotos_personal");
+            // CREA LA CARPETA AUTOMÁTICAMENTE SI NO EXISTE EN LA BÓVEDA
+            string carpetaDestino = Path.Combine(_env.ContentRootPath, "AlmacenPrivado", "fotos_personal");
             if (!Directory.Exists(carpetaDestino)) Directory.CreateDirectory(carpetaDestino);
 
             // BORRA FOTOS VIEJAS PARA NO DUPLICAR
@@ -439,7 +419,8 @@ namespace GestorInventarioPrimaria.Controllers
                 await foto.CopyToAsync(stream);
             }
 
-            personal.FotoUrl = $"/fotos_personal/{nombreArchivo}";
+            // NUEVO: La URL apunta al endpoint seguro de personal
+            personal.FotoUrl = $"/api/Usuarios/foto/personal/{nombreArchivo}";
             await _context.SaveChangesAsync();
 
             return Ok(new { mensaje = "Foto de perfil actualizada.", fotoUrl = personal.FotoUrl });
@@ -470,6 +451,32 @@ namespace GestorInventarioPrimaria.Controllers
             await _context.SaveChangesAsync();
 
             return Ok(new { mensaje = "Contraseña actualizada correctamente." });
+        }
+
+        // =========================================================================
+        // --- ENDPOINT ESTRELLA: EL GUARDIA DE LAS FOTOS SECRETA (VÍA QUERY JWT) ---
+        // =========================================================================
+        [AllowAnonymous] // Permitimos que las etiquetas <img> lo llamen, validamos adentro
+        [HttpGet("foto/{tipo}/{nombreArchivo}")]
+        public async Task<IActionResult> ObtenerFotoProtegida(string tipo, string nombreArchivo, [FromQuery] string t)
+        {
+            if (string.IsNullOrEmpty(t)) return Unauthorized("Acceso denegado. Falta token de seguridad.");
+
+            // Validamos contra la BD que la sesión sea legítima
+            bool accesoPermitido = await _context.Usuarios.AnyAsync(u => u.TokenSesion == t);
+            if (!accesoPermitido) return Unauthorized("Sesión inválida o expirada.");
+
+            // Validamos que 'tipo' sea solo 'alumnos' o 'personal' para evitar hackeos de rutas
+            if (tipo != "alumnos" && tipo != "personal") return NotFound();
+
+            string rutaCompleta = Path.Combine(_env.ContentRootPath, "AlmacenPrivado", $"fotos_{tipo}", nombreArchivo);
+            
+            if (!System.IO.File.Exists(rutaCompleta)) return NotFound();
+
+            var ext = Path.GetExtension(rutaCompleta).ToLowerInvariant();
+            string mimeType = ext == ".png" ? "image/png" : "image/jpeg";
+            
+            return PhysicalFile(rutaCompleta, mimeType);
         }
     }
 
