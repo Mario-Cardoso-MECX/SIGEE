@@ -17,6 +17,10 @@ document.addEventListener("DOMContentLoaded", () => {
             badge.style.cursor = 'pointer';
             badge.title = "Haz clic para ver y editar tu perfil";
             
+            // Aseguramos que el badge sea flexbox para alinear bien la foto y el texto
+            badge.style.display = 'flex';
+            badge.style.alignItems = 'center';
+            
             // Le asignamos el evento click de forma explícita
             badge.addEventListener('click', abrirPerfil);
             
@@ -26,27 +30,42 @@ document.addEventListener("DOMContentLoaded", () => {
 
             // Consultar si tiene foto para cambiar el icono default
             fetch(`${API_URL}/Usuarios/${sesion.id}`, {
-                headers: { 'Authorization': `Bearer ${sesion.token}` }
+                headers: { 'Authorization': `Bearer ${sesion.token}` } // <-- NUEVO: TOKEN
             })
                 .then(res => res.json())
                 .then(user => {
                     if (user.fotoUrl && user.fotoUrl !== 'null' && user.fotoUrl !== '') {
                         const baseUrl = API_URL.endsWith('/api') ? API_URL.replace('/api', '') : API_URL.substring(0, API_URL.indexOf('/api'));
                         
-                        const iconoViejo = badge.querySelector('.icon-usuario') || badge.querySelector('.fa-user-circle');
+                        // Buscamos el icono viejo (fa-user-circle o similar) y lo borramos
+                        const iconoViejo = badge.querySelector('i.fas.fa-user-circle') || badge.querySelector('.icon-usuario');
                         if(iconoViejo) iconoViejo.remove();
                         
-                        const img = document.createElement('img');
-                        img.src = baseUrl + user.fotoUrl + `?t=${sesion.tokenUnicoDb}&cache=${new Date().getTime()}`; 
-                        img.style.width = '35px';
-                        img.style.height = '35px';
-                        img.style.borderRadius = '50%';
-                        img.style.objectFit = 'cover';
-                        img.style.marginRight = '8px';
-                        img.style.border = '2px solid white';
-                        img.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+                        // Verificamos si ya existe una imagen (por si se llama dos veces)
+                        let img = badge.querySelector('img.foto-perfil-nav');
                         
-                        badge.insertBefore(img, badge.firstChild);
+                        if (!img) {
+                            img = document.createElement('img');
+                            img.className = 'foto-perfil-nav'; // Le damos una clase para encontrarla fácil
+                            img.style.width = '35px';
+                            img.style.height = '35px';
+                            img.style.borderRadius = '50%';
+                            img.style.objectFit = 'cover';
+                            img.style.marginRight = '8px';
+                            img.style.border = '2px solid white';
+                            img.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+                            
+                            // Insertamos la imagen justo antes del contenedor de texto (nombre y rol)
+                            const infoContainer = badge.querySelector('div');
+                            if (infoContainer) {
+                                badge.insertBefore(img, infoContainer);
+                            } else {
+                                badge.prepend(img); // Respaldo por si falla la estructura
+                            }
+                        }
+                        
+                        // <-- MAGIA: Inyectamos el ?t=tokenUnicoDb (y un salt de tiempo extra para evitar caché)
+                        img.src = baseUrl + user.fotoUrl + `?t=${sesion.tokenUnicoDb}&cache=${new Date().getTime()}`; 
                     }
                 }).catch(e => console.log("Error cargando foto:", e));
         } else {
@@ -62,7 +81,7 @@ async function abrirPerfil() {
     let userDb = null;
     try {
         const res = await fetch(`${API_URL}/Usuarios/${sesion.id}`, {
-            headers: { 'Authorization': `Bearer ${sesion.token}` }
+            headers: { 'Authorization': `Bearer ${sesion.token}` } // <-- NUEVO: TOKEN
         });
         userDb = await res.json();
     } catch(e) { 
@@ -73,6 +92,7 @@ async function abrirPerfil() {
     let fotoActual = 'https://ui-avatars.com/api/?name=' + userDb.nombre.replace(/ /g, '+') + '&background=cbd5e1&color=475569';
     if (userDb.fotoUrl && userDb.fotoUrl !== 'null' && userDb.fotoUrl !== '') {
         const baseUrl = API_URL.endsWith('/api') ? API_URL.replace('/api', '') : API_URL.substring(0, API_URL.indexOf('/api'));
+        // <-- MAGIA: Inyectamos el ?t=tokenUnicoDb en la previsualización
         fotoActual = baseUrl + userDb.fotoUrl + `?t=${sesion.tokenUnicoDb}&cache=${new Date().getTime()}`;
     }
 
@@ -126,18 +146,10 @@ async function abrirPerfil() {
     });
 
     if (formValues) {
-
+        // Lanzamos la alerta de carga SIN await para que no bloquee el código
+        Swal.fire({ title: 'Actualizando perfil...', allowOutsideClick: false, didOpen: () => { Swal.showLoading() } });
+        
         try {
-            // 🔥 ALERTA 1: CARGANDO (2 SEGUNDOS FIJOS)
-            await Swal.fire({
-                title: 'Actualizando perfil...',
-                allowOutsideClick: false,
-                showConfirmButton: false,
-                timer: 2000,
-                timerProgressBar: true,
-                didOpen: () => { Swal.showLoading() }
-            });
-
             // 1. Guardar Foto si seleccionó alguna
             if (formValues.file) {
                 const formData = new FormData();
@@ -145,7 +157,7 @@ async function abrirPerfil() {
                 const resFoto = await fetch(`${API_URL}/Usuarios/subir-foto-personal/${formValues.username}`, {
                     method: 'POST',
                     body: formData,
-                    headers: { 'Authorization': `Bearer ${sesion.token}` }
+                    headers: { 'Authorization': `Bearer ${sesion.token}` } // <-- NUEVO: TOKEN
                 });
                 if (!resFoto.ok) throw new Error("Error al subir la imagen. Verifica el formato.");
             }
@@ -156,7 +168,7 @@ async function abrirPerfil() {
                     method: 'PUT',
                     headers: { 
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${sesion.token}`
+                        'Authorization': `Bearer ${sesion.token}` // <-- NUEVO: TOKEN
                     },
                     body: JSON.stringify({
                         username: formValues.username,
@@ -171,52 +183,19 @@ async function abrirPerfil() {
                 }
             }
 
-            // ✅ CORRECCIÓN: await agregado para que respete los 2 segundos
-            await Swal.fire({
+            // --- SOLUCIÓN INFALIBLE PARA LA ALERTA ---
+            Swal.fire({
                 title: '¡Perfil Actualizado!',
                 text: 'Tus datos se guardaron correctamente.',
                 icon: 'success',
+                timer: 2000, 
+                timerProgressBar: true,
                 showConfirmButton: false,
-                timer: 2000,
-                timerProgressBar: true
-            });
-
-            // 🔥 ACTUALIZAR FOTO EN VIVO 🔥
-            if (formValues.file) {
-                const badge = document.querySelector('.user-badge');
-
-                if (badge) {
-                    const baseUrl = API_URL.endsWith('/api') 
-                        ? API_URL.replace('/api', '') 
-                        : API_URL.substring(0, API_URL.indexOf('/api'));
-
-                    const resUser = await fetch(`${API_URL}/Usuarios/${sesion.id}`, {
-                        headers: { 'Authorization': `Bearer ${sesion.token}` }
-                    });
-
-                    const userActualizado = await resUser.json();
-
-                    if (userActualizado.fotoUrl) {
-                        const nuevaFoto = baseUrl + userActualizado.fotoUrl + `?t=${sesion.tokenUnicoDb}&cache=${new Date().getTime()}`;
-
-                        let img = badge.querySelector('img');
-
-                        if (img) {
-                            img.src = nuevaFoto;
-                        } else {
-                            img = document.createElement('img');
-                            img.src = nuevaFoto;
-                            img.style.width = '35px';
-                            img.style.height = '35px';
-                            img.style.borderRadius = '50%';
-                            img.style.objectFit = 'cover';
-                            img.style.marginRight = '8px';
-                            
-                            badge.insertBefore(img, badge.firstChild);
-                        }
-                    }
+                willClose: () => {
+                    // Esto obliga a que la página NO se recargue hasta que la alerta se cierre
+                    location.reload(); 
                 }
-            }
+            });
 
         } catch (error) {
             Swal.fire('Atención', error.message, 'warning');
