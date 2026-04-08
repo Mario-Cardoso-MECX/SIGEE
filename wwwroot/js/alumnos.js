@@ -422,6 +422,7 @@ async function eliminarEgresadosMasivo() {
     }
 }
 
+// --- CORRECCIÓN DEFINITIVA DEL DISEÑO DEL HISTORIAL ---
 async function verHistorialAlumno(id, nombre) {
     Swal.fire({ title: `Cargando historial de ${nombre}...`, allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
 
@@ -441,23 +442,40 @@ async function verHistorialAlumno(id, nombre) {
         let filasTabla = '';
         datos.forEach(d => {
             let colorEstado = d.estado === 'Activo' ? '#f39c12' : '#27ae60'; 
+            let iconoEstado = d.estado === 'Activo' ? '<i class="fas fa-clock"></i>' : '<i class="fas fa-check-circle"></i>';
+            
+            // 1. Material tiene "word-wrap" para que no se corte.
+            // 2. Fecha y Estatus tienen "white-space: nowrap" para que NUNCA se pongan en vertical.
             filasTabla += `
-                <tr style="border-bottom: 1px solid #eee;">
-                    <td style="padding: 10px; text-align: left;"><strong>${d.material}</strong><br><small style="color:gray;">${d.categoria}</small></td>
-                    <td style="padding: 10px;">${d.fechaPrestamo}</td>
-                    <td style="padding: 10px; color: ${colorEstado}; font-weight: bold;">${d.estado}</td>
+                <tr style="border-bottom: 1px solid #f1f5f9; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#f8fafc'" onmouseout="this.style.backgroundColor='transparent'">
+                    <td style="padding: 12px 15px; text-align: left; width: 55%;">
+                        <span style="font-weight: 600; color: #1e293b; display: block; margin-bottom: 6px; line-height: 1.4; word-wrap: break-word; white-space: normal;">${d.material}</span>
+                        <span style="color: #64748b; font-size: 0.75rem; background: #e2e8f0; padding: 4px 8px; border-radius: 12px; white-space: nowrap;">${d.categoria}</span>
+                    </td>
+                    <td style="padding: 12px 15px; color: #475569; font-size: 0.9rem; text-align: center; vertical-align: middle; white-space: nowrap; width: 20%;">
+                        ${d.fechaPrestamo}
+                    </td>
+                    <td style="padding: 12px 15px; text-align: center; vertical-align: middle; width: 25%;">
+                        <span style="display: inline-block; white-space: nowrap; color: ${colorEstado}; font-weight: bold; font-size: 0.85rem; border: 1.5px solid ${colorEstado}; padding: 5px 12px; border-radius: 20px; background-color: #fff;">
+                            ${iconoEstado} ${d.estado}
+                        </span>
+                    </td>
                 </tr>
             `;
         });
 
         const tablaHTML = `
-            <div style="max-height: 350px; overflow-y: auto; border: 1px solid #ddd; border-radius: 8px;">
-                <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem; table-layout: auto !important;">
-                    <thead style="background-color: #2c3e50; color: white; position: sticky; top: 0; z-index: 5;">
+            <div style="background-color: #f8fafc; border-radius: 8px; padding: 15px; margin-bottom: 15px; text-align: left;">
+                <h4 style="margin: 0; color: #334155; font-size: 1.1rem;"><i class="fas fa-user-graduate" style="color: #3b82f6;"></i> ${nombre}</h4>
+                <p style="margin: 5px 0 0 0; color: #64748b; font-size: 0.85rem;">Historial completo de material prestado</p>
+            </div>
+            <div style="max-height: 400px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);">
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem; table-layout: fixed;">
+                    <thead style="background-color: #f1f5f9; color: #475569; position: sticky; top: 0; z-index: 5;">
                         <tr>
-                            <th style="padding: 12px 10px; text-align: left; width: 60%;">Material Solicitado</th>
-                            <th style="padding: 12px 10px; text-align: center;">Fecha</th>
-                            <th style="padding: 12px 10px; text-align: center;">Estatus</th>
+                            <th style="padding: 12px 15px; text-align: left; font-weight: 600; border-bottom: 2px solid #cbd5e1; width: 55%;">Material</th>
+                            <th style="padding: 12px 15px; text-align: center; font-weight: 600; border-bottom: 2px solid #cbd5e1; width: 20%;">Fecha</th>
+                            <th style="padding: 12px 15px; text-align: center; font-weight: 600; border-bottom: 2px solid #cbd5e1; width: 25%;">Estatus</th>
                         </tr>
                     </thead>
                     <tbody>${filasTabla}</tbody>
@@ -465,7 +483,18 @@ async function verHistorialAlumno(id, nombre) {
             </div>
         `;
 
-        Swal.fire({ title: `<i class="fas fa-book-reader" style="color: #3498db;"></i> Historial de Lectura`, html: `<p style="margin-bottom: 15px; font-weight: bold; color:#2c3e50;">Alumno: ${nombre}</p>${tablaHTML}`, width: '600px', showCloseButton: true, showConfirmButton: false });
+        Swal.fire({ 
+            title: false, 
+            html: tablaHTML, 
+            width: '750px', // <-- ¡EL SECRETO! Modal mucho más ancho para que todo quepa.
+            showCloseButton: true, 
+            showConfirmButton: true,
+            confirmButtonText: 'Cerrar',
+            confirmButtonColor: '#8e44ad', // <-- Botón en morado
+            customClass: {
+                popup: 'swal-historial-popup'
+            }
+        });
     } catch (error) { Swal.fire('Error', 'No se pudo cargar el historial del alumno.', 'error'); }
 }
 
