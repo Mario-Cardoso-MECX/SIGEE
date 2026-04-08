@@ -98,37 +98,38 @@ async function cargarAlumnos() {
             const apellidos = a.apellidos || "";
             const nombreCompleto = `${nombre} ${apellidos}`.trim();
 
-            const btnHistorial = `<button onclick="verHistorialAlumno(${a.id}, '${nombreCompleto.replace(/'/g, "\\'")}')" class="btn-historial" title="Ver Historial"><i class="fa-solid fa-eye"></i></button>`;
-            const btnFoto = `<button onclick="abrirSubirFoto('${a.matricula}')" style="background-color: #3498db !important; padding: 8px 12px !important; border-radius: 6px !important; border: none; color: white; cursor: pointer;" title="Subir Foto"><i class="fas fa-camera"></i></button>`;
-            const btnCredencial = `<button onclick="mostrarCredencial('${nombreCompleto.replace(/'/g, "\\'")}', '${a.matricula}', '${a.grupo}', '${a.fotoUrl || ""}')" style="background-color: #27ae60 !important; padding: 8px 12px !important; border-radius: 6px !important; border: none; color: white; cursor: pointer;" title="Generar Credencial"><i class="fas fa-id-badge"></i></button>`;
+            // --- AQUÍ ESTÁ EL OJO MORADO EN LA TABLA ---
+            const btnHistorial = `<button onclick="verHistorialAlumno(${a.id}, '${nombreCompleto.replace(/'/g, "\\'")}')" style="background-color: #8e44ad !important; padding: 8px 12px !important; border-radius: 6px !important; border: none; color: white; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; height: 35px;" title="Ver Historial"><i class="fa-solid fa-eye"></i></button>`;
+            const btnFoto = `<button onclick="abrirSubirFoto('${a.matricula}')" style="background-color: #3498db !important; padding: 8px 12px !important; border-radius: 6px !important; border: none; color: white; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; height: 35px;" title="Subir Foto"><i class="fas fa-camera"></i></button>`;
+            const btnCredencial = `<button onclick="mostrarCredencial('${nombreCompleto.replace(/'/g, "\\'")}', '${a.matricula}', '${a.grupo}', '${a.fotoUrl || ""}')" style="background-color: #27ae60 !important; padding: 8px 12px !important; border-radius: 6px !important; border: none; color: white; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; height: 35px;" title="Generar Credencial"><i class="fas fa-id-badge"></i></button>`;
             
             let acciones = "";
             
             if (puedeEditar) {
                 acciones = `
-                    <div class="acciones-flex">
+                    <div class="acciones-flex" style="display: flex; justify-content: center; align-items: center; gap: 6px;">
                         ${btnHistorial}
                         ${btnFoto}
                         ${btnCredencial}
-                        <button onclick="prepararEdicionAlumno(${a.id}, '${nombre.replace(/'/g, "\\'")}', '${apellidos.replace(/'/g, "\\'")}', '${a.grupo}')" class="btn-editar-naranja" title="Editar"><i class="fa-solid fa-pen-to-square"></i></button>
-                        <button onclick="eliminarAlumno(${a.id})" class="btn-borrar-rojo" title="Eliminar"><i class="fa-solid fa-trash"></i></button>
+                        <button onclick="prepararEdicionAlumno(${a.id}, '${nombre.replace(/'/g, "\\'")}', '${apellidos.replace(/'/g, "\\'")}', '${a.grupo}')" class="btn-editar-naranja" title="Editar" style="display: inline-flex; align-items: center; justify-content: center; height: 35px;"><i class="fa-solid fa-pen-to-square"></i></button>
+                        <button onclick="eliminarAlumno(${a.id})" class="btn-borrar-rojo" title="Eliminar" style="display: inline-flex; align-items: center; justify-content: center; height: 35px;"><i class="fa-solid fa-trash"></i></button>
                     </div>
                 `;
             } else {
                 acciones = `
-                    <div class="acciones-flex">
+                    <div class="acciones-flex" style="display: flex; justify-content: center; align-items: center; gap: 10px;">
                         ${btnHistorial}
-                        <span style="color:gray; font-size:0.85rem; margin-left: 5px;">Solo lectura</span>
+                        <span style="color:gray; font-size:0.85rem; font-weight: bold; background-color: #f1f2f6; padding: 4px 10px; border-radius: 12px;">Solo lectura</span>
                     </div>
                 `;
             }
 
             htmlFilas += `
                 <tr data-matricula="${a.matricula}" data-nombre="${nombreCompleto.replace(/"/g, '&quot;')}" data-grupo="${a.grupo || ''}" data-foto="${a.fotoUrl || ''}">
-                    <td><strong>${a.matricula}</strong></td>
-                    <td>${nombreCompleto}</td>
-                    <td>${a.grupo}</td>
-                    <td style="text-align:center;">${acciones}</td>
+                    <td style="vertical-align: middle;"><strong>${a.matricula}</strong></td>
+                    <td style="vertical-align: middle;">${nombreCompleto}</td>
+                    <td style="vertical-align: middle;">${a.grupo}</td>
+                    <td style="text-align:center; vertical-align: middle;">${acciones}</td>
                 </tr>
             `;
         });
@@ -490,7 +491,7 @@ async function verHistorialAlumno(id, nombre) {
             showCloseButton: true, 
             showConfirmButton: true,
             confirmButtonText: 'Cerrar',
-            confirmButtonColor: '#8e44ad', // <-- Botón en morado
+            confirmButtonColor: '#3b82f6', // <-- Botón de cerrar de la alerta en azul original
             customClass: {
                 popup: 'swal-historial-popup'
             }

@@ -128,9 +128,18 @@ async function abrirPerfil() {
     });
 
     if (formValues) {
-        Swal.fire({ title: 'Actualizando perfil...', allowOutsideClick: false, didOpen: () => { Swal.showLoading() } });
-        
+
         try {
+            // 🔥 ALERTA 1: CARGANDO (2 SEGUNDOS FIJOS)
+            await Swal.fire({
+                title: 'Actualizando perfil...',
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                timer: 2000,
+                timerProgressBar: true,
+                didOpen: () => { Swal.showLoading() }
+            });
+
             // 1. Guardar Foto si seleccionó alguna
             if (formValues.file) {
                 const formData = new FormData();
@@ -164,14 +173,55 @@ async function abrirPerfil() {
                 }
             }
 
+            // 🔥 ALERTA 2: ÉXITO (2 SEGUNDOS)
             Swal.fire({
                 title: '¡Perfil Actualizado!',
                 text: 'Tus datos se guardaron correctamente.',
                 icon: 'success',
-                confirmButtonColor: '#27ae60'
-            }).then(() => {
-                location.reload(); // Recargar para mostrar la nueva foto y asegurar la sesión
+                showConfirmButton: false,
+                timer: 2000,
+                timerProgressBar: true
             });
+
+            // ⏱️ FORZAR que se quede visible los 2 segundos reales
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
+            // 🔥 ACTUALIZAR FOTO EN VIVO 🔥
+            if (formValues.file) {
+                const badge = document.querySelector('.user-badge');
+
+                if (badge) {
+                    const baseUrl = API_URL.endsWith('/api') 
+                        ? API_URL.replace('/api', '') 
+                        : API_URL.substring(0, API_URL.indexOf('/api'));
+
+                    const resUser = await fetch(`${API_URL}/Usuarios/${sesion.id}`, {
+                        headers: { 'Authorization': `Bearer ${sesion.token}` }
+                    });
+
+                    const userActualizado = await resUser.json();
+
+                    if (userActualizado.fotoUrl) {
+                        const nuevaFoto = baseUrl + userActualizado.fotoUrl + `?t=${sesion.tokenUnicoDb}&cache=${new Date().getTime()}`;
+
+                        let img = badge.querySelector('img');
+
+                        if (img) {
+                            img.src = nuevaFoto;
+                        } else {
+                            img = document.createElement('img');
+                            img.src = nuevaFoto;
+                            img.style.width = '35px';
+                            img.style.height = '35px';
+                            img.style.borderRadius = '50%';
+                            img.style.objectFit = 'cover';
+                            img.style.marginRight = '8px';
+                            
+                            badge.insertBefore(img, badge.firstChild);
+                        }
+                    }
+                }
+            }
 
         } catch (error) {
             Swal.fire('Atención', error.message, 'warning');
