@@ -44,7 +44,8 @@ namespace GestorInventarioPrimaria.Controllers
         {
             var topLibros = await _context.Reservas
                 .Include(r => r.Material) 
-                .Where(r => r.Material != null && r.Material.Categoria != "Salón") 
+                // --- CORRECCIÓN: Filtramos estrictamente por la categoría "Libro" ---
+                .Where(r => r.Material != null && r.Material.Categoria == "Libro") 
                 .GroupBy(r => r.Material.Titulo)
                 .Select(g => new { Titulo = g.Key, Cantidad = g.Count() })
                 .OrderByDescending(x => x.Cantidad)
@@ -61,9 +62,9 @@ namespace GestorInventarioPrimaria.Controllers
             int anioActual = System.DateTime.Now.Year;
             
             // Obtenemos los datos a memoria primero para evitar errores
-            // Usamos tus estatus reales: "Activo" o "Finalizado"
+            // --- CORRECCIÓN: Usamos tus estatus reales: "Activo" o "Devuelto" ---
             var reservas = await _context.Reservas
-                .Where(r => r.Estatus == "Activo" || r.Estatus == "Finalizado") 
+                .Where(r => r.Estatus == "Activo" || r.Estatus == "Devuelto") 
                 .ToListAsync();
 
             var prestamos = reservas
