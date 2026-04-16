@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer; // <-- NUEVO: SEGURIDAD JWT
 using Microsoft.IdentityModel.Tokens; // <-- NUEVO: SEGURIDAD JWT
 using System.Text; // <-- NUEVO: SEGURIDAD JWT
 using System.IO;
+using GestorInventarioPrimaria.Interfaces;
+using GestorInventarioPrimaria.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -60,6 +62,19 @@ builder.Services.AddCors(options =>
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+// NUEVO: Registrar el patrón de servicios
+builder.Services.AddScoped<IPrestamoService, PrestamoService>();
+// NUEVO:
+builder.Services.AddScoped<IMaterialService, MaterialService>();
+// NUEVO:
+builder.Services.AddScoped<IUsuarioService, UsuarioService>();
+// NUEVO:
+builder.Services.AddScoped<IAulaService, AulaService>();
+// NUEVO:
+builder.Services.AddScoped<IDashboardService, DashboardService>();
+// NUEVO:
+builder.Services.AddScoped<IAuthService, AuthService>();
 
 var app = builder.Build();
 

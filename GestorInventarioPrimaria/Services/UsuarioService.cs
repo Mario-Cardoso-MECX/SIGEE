@@ -1,0 +1,337 @@
+using GestorInventarioPrimaria.DTOs;
+using GestorInventarioPrimaria.Data;
+using GestorInventarioPrimaria.Interfaces;
+using GestorInventarioPrimaria.Models;
+using Microsoft.EntityFrameworkCore;
+using System.IO;
+
+namespace GestorInventarioPrimaria.Services
+{
+    public class UsuarioService : IUsuarioService
+    {
+        private readonly AppDbContext _context;
+
+        public UsuarioService(AppDbContext context)
+        {
+            _context = context;
+        }
+
+        public async Task<IEnumerable<Usuario>> GetAlumnosAsync()
+        {
+            var alumnos = await _context.Usuarios.Where(u => u.Rol == "Alumno").OrderBy(u => u.Matricula).ToListAsync();
+            foreach (var alumno in alumnos) alumno.PasswordHash = null;
+            return alumnos;
+        }
+
+        public async Task<IEnumerable<Usuario>> BuscarUsuariosAsync(string termino)
+        {
+            if (string.IsNullOrWhiteSpace(termino)) return new List<Usuario>();
+
+            var usuarios = await _context.Usuarios
+                .Where(u => u.Nombre.Contains(termino) || u.Matricula.Contains(termino))
+                .Take(5)
+                .ToListAsync();
+
+            foreach (var usuario in usuarios) usuario.PasswordHash = null;
+            return usuarios;
+        }
+
+        public async Task<(int StatusCode, object Data)> CrearAlumnoAsync(Usuario nuevoAlumno)
+        {
+            if (string.IsNullOrWhiteSpace(nuevoAlumno.Apellidos))
+                return (400, new { mensaje = "❌ Los apellidos son obligatorios." });
+
+            bool existe = await _context.Usuarios.AnyAsync(u => u.Nombre.ToLower() == nuevoAlumno.Nombre.ToLower() && u.Apellidos.ToLower() == nuevoAlumno.Apellidos.ToLower());
+            if (existe) return (400, new { mensaje = "❌ Ya existe un alumno con ese nombre y apellidos." });
+
+            string anioActual = DateTime.Now.Year.ToString();
+            var ultimoUsuario = await _context.Usuarios.Where(u => u.Matricula.StartsWith(anioActual)).OrderByDescending(u => u.Id).FirstOrDefaultAsync();
+
+            int consecutivo = 1;
+            if (ultimoUsuario != null && ultimoUsuario.Matricula.Contains("-"))
+            {
+                string[] partes = ultimoUsuario.Matricula.Split('-');
+                if (partes.Length > 1 && int.TryParse(partes[1], out int num)) consecutivo = num + 1;
+            }
+
+            nuevoAlumno.Matricula = $"{anioActual}-{consecutivo:D3}";
+            nuevoAlumno.Rol = "Alumno";
+            nuevoAlumno.PasswordHash = BCrypt.Net.BCrypt.HashPassword("1234");
+
+            _context.Usuarios.Add(nuevoAlumno);
+            await _context.SaveChangesAsync();
+
+            return (200, new { mensaje = "✅ Alumno registrado con éxito", matricula = nuevoAlumno.Matricula });
+        }
+
+        public async Task<(int StatusCode, object Data)> SubirFotoAlumnoAsync(string matricula, IFormFile foto, string rootPath)
+        {
+            if (foto == null || foto.Length == 0) return (400, new { mensaje = "No se recibió ninguna imagen." });
+
+            var alumno = await _context.Usuarios.FirstOrDefaultAsync(u => u.Matricula == matricula);
+            if (alumno == null) return (404, new { mensaje = "Alumno no encontrado." });
+
+            var ext = Path.GetExtension(foto.FileName).ToLowerInvariant();
+            if (ext != ".jpg" && ext != ".jpeg" && ext != ".png") return (400, new { mensaje = "Solo se permiten imágenes JPG o PNG." });
+
+            string carpetaDestino = Path.Combine(rootPath, "AlmacenPrivado", "fotos_alumnos");
+            if (!Directory.Exists(carpetaDestino)) Directory.CreateDirectory(carpetaDestino);
+
+            var archivosExistentes = Directory.GetFiles(carpetaDestino, $"{matricula}.*");
+            foreach (var archivoViejo in archivosExistentes) System.IO.File.Delete(archivoViejo);
+
+            string nombreArchivo = $"{matricula}{ext}";
+            string rutaCompleta = Path.Combine(carpetaDestino, nombreArchivo);
+
+            using (var stream = new FileStream(rutaCompleta, FileMode.Create))
+            {
+                await foto.CopyToAsync(stream);
+            }
+
+            alumno.FotoUrl = $"/api/Usuarios/foto/alumnos/{nombreArchivo}";
+            await _context.SaveChangesAsync();
+
+            return (200, new { mensaje = "Foto subida y guardada correctamente.", fotoUrl = alumno.FotoUrl });
+        }
+
+        public async Task<(int StatusCode, object Data)> EditarAlumnoAsync(int id, Usuario datosActualizados)
+        {
+            var alumnoDb = await _context.Usuarios.FindAsync(id);
+            if (alumnoDb == null || alumnoDb.Rol != "Alumno") return (404, new { mensaje = "El alumno no existe." });
+
+            alumnoDb.Nombre = datosActualizados.Nombre;
+            alumnoDb.Apellidos = datosActualizados.Apellidos;
+            alumnoDb.Grupo = datosActualizados.Grupo;
+
+            await _context.SaveChangesAsync();
+            return (200, new { mensaje = "Datos del alumno actualizados correctamente." });
+        }
+
+        public async Task<(int StatusCode, object Data)> DeleteUsuarioAsync(int id)
+        {
+            var usuario = await _context.Usuarios.FindAsync(id);
+            if (usuario == null) return (404, new { mensaje = "El alumno no existe." });
+
+            var tienePrestamosPendientes = await _context.Reservas.AnyAsync(r => r.UsuarioId == id && r.Estatus == "Activo");
+            if (tienePrestamosPendientes) return (400, new { mensaje = "No se puede eliminar al alumno porque tiene préstamos activos pendientes." });
+
+            var historialAnterior = await _context.Reservas.Where(r => r.UsuarioId == id).ToListAsync();
+            if (historialAnterior.Any()) _context.Reservas.RemoveRange(historialAnterior);
+
+            _context.Usuarios.Remove(usuario);
+            await _context.SaveChangesAsync();
+            return (200, new { mensaje = "Alumno eliminado correctamente." });
+        }
+
+        public async Task<IEnumerable<Usuario>> GetPersonalAdministrativoAsync()
+        {
+            var personal = await _context.Usuarios.Where(u => u.Rol != "Alumno").OrderBy(u => u.Rol).ThenBy(u => u.Nombre).ToListAsync();
+            foreach (var p in personal) p.PasswordHash = null;
+            return personal;
+        }
+
+        public async Task<(int StatusCode, object Data)> CrearPersonalAsync(Usuario nuevoPersonal)
+        {
+            if (string.IsNullOrWhiteSpace(nuevoPersonal.Nombre) || string.IsNullOrWhiteSpace(nuevoPersonal.Apellidos) || string.IsNullOrWhiteSpace(nuevoPersonal.Username) || string.IsNullOrWhiteSpace(nuevoPersonal.PasswordHash) || string.IsNullOrWhiteSpace(nuevoPersonal.Rol))
+                return (400, new { mensaje = "❌ Todos los campos son obligatorios." });
+
+            bool usernameExiste = await _context.Usuarios.AnyAsync(u => u.Username.ToLower() == nuevoPersonal.Username.ToLower());
+            if (usernameExiste) return (400, new { mensaje = "❌ El nombre de usuario ya está en uso." });
+
+            string anioActual = DateTime.Now.Year.ToString();
+            var ultimoPersonal = await _context.Usuarios.Where(u => u.Matricula.StartsWith("PER-" + anioActual)).OrderByDescending(u => u.Id).FirstOrDefaultAsync();
+
+            int consecutivo = 1;
+            if (ultimoPersonal != null && ultimoPersonal.Matricula.Contains("-"))
+            {
+                string[] partes = ultimoPersonal.Matricula.Split('-');
+                if (partes.Length > 2 && int.TryParse(partes[2], out int num)) consecutivo = num + 1;
+            }
+
+            nuevoPersonal.Matricula = $"PER-{anioActual}-{consecutivo:D3}";
+            nuevoPersonal.Grupo = string.Empty;
+            nuevoPersonal.PasswordHash = BCrypt.Net.BCrypt.HashPassword(nuevoPersonal.PasswordHash);
+
+            _context.Usuarios.Add(nuevoPersonal);
+            await _context.SaveChangesAsync();
+            return (200, new { mensaje = "Usuario registrado con éxito", matricula = nuevoPersonal.Matricula });
+        }
+
+        public async Task<(int StatusCode, object Data)> GetUsuarioAsync(int id)
+        {
+            var usuario = await _context.Usuarios.FindAsync(id);
+            if (usuario == null) return (404, new { mensaje = "Usuario no encontrado." });
+            usuario.PasswordHash = null;
+            return (200, usuario);
+        }
+
+        public async Task<(int StatusCode, object Data)> EditarPersonalAsync(int id, Usuario datosActualizados)
+        {
+            var usuarioDb = await _context.Usuarios.FindAsync(id);
+            if (usuarioDb == null) return (404, new { mensaje = "El usuario no existe." });
+
+            usuarioDb.Nombre = datosActualizados.Nombre;
+            usuarioDb.Apellidos = datosActualizados.Apellidos;
+            usuarioDb.Username = datosActualizados.Username;
+            usuarioDb.Rol = datosActualizados.Rol;
+
+            if (!string.IsNullOrWhiteSpace(datosActualizados.PasswordHash))
+                usuarioDb.PasswordHash = BCrypt.Net.BCrypt.HashPassword(datosActualizados.PasswordHash);
+
+            await _context.SaveChangesAsync();
+            return (200, new { mensaje = "✅ Datos actualizados correctamente." });
+        }
+
+        public async Task<(int StatusCode, object Data)> EliminarPersonalAsync(int id)
+        {
+            var personalDb = await _context.Usuarios.FindAsync(id);
+            if (personalDb == null) return (404, new { mensaje = "El usuario no existe." });
+            if (personalDb.Rol == "Alumno") return (400, new { mensaje = "Los alumnos se deben eliminar desde el módulo de Alumnos." });
+
+            _context.Usuarios.Remove(personalDb);
+            await _context.SaveChangesAsync();
+            return (200, new { mensaje = "✅ Personal eliminado correctamente." });
+        }
+
+        public async Task<(int StatusCode, object Data)> PromocionMasivaAsync()
+        {
+            var alumnos = await _context.Usuarios.Where(u => u.Rol == "Alumno").ToListAsync();
+            int promovidos = 0; int egresados = 0;
+
+            foreach (var alumno in alumnos)
+            {
+                if (string.IsNullOrWhiteSpace(alumno.Grupo)) continue;
+                string[] partes = alumno.Grupo.Trim().Split(' ');
+                
+                if (partes.Length >= 2)
+                {
+                    string grado = partes[0]; string letra = partes[1];
+                    switch (grado)
+                    {
+                        case "1°": alumno.Grupo = $"2° {letra}"; promovidos++; break;
+                        case "2°": alumno.Grupo = $"3° {letra}"; promovidos++; break;
+                        case "3°": alumno.Grupo = $"4° {letra}"; promovidos++; break;
+                        case "4°": alumno.Grupo = $"5° {letra}"; promovidos++; break;
+                        case "5°": alumno.Grupo = $"6° {letra}"; promovidos++; break;
+                        case "6°": alumno.Grupo = "Egresado"; egresados++; break;
+                    }
+                }
+            }
+            await _context.SaveChangesAsync();
+            return (200, new { mensaje = $"¡Cierre exitoso! {promovidos} alumnos subieron de grado y {egresados} niños se marcaron como Egresados." });
+        }
+
+        public async Task<(int StatusCode, object Data)> EliminarEgresadosMasivoAsync()
+        {
+            var egresados = await _context.Usuarios.Where(u => u.Rol == "Alumno" && u.Grupo != null && u.Grupo.Contains("Egresado")).ToListAsync();
+            if (egresados.Count == 0) return (400, new { mensaje = "No hay alumnos egresados en el sistema o ya fueron limpiados." });
+
+            int borrados = 0; int conDeuda = 0;
+
+            foreach (var eg in egresados)
+            {
+                var debeMaterial = await _context.Reservas.AnyAsync(r => r.UsuarioId == eg.Id && r.Estatus == "Activo");
+                if (debeMaterial) conDeuda++; 
+                else 
+                {
+                    var historialAnterior = await _context.Reservas.Where(r => r.UsuarioId == eg.Id).ToListAsync();
+                    if (historialAnterior.Any()) _context.Reservas.RemoveRange(historialAnterior);
+                    _context.Usuarios.Remove(eg);
+                    borrados++;
+                }
+            }
+            await _context.SaveChangesAsync();
+            string warning = conDeuda > 0 ? $" ⚠️ IMPORTANTE: {conDeuda} alumnos se mantuvieron en el sistema porque aún deben material." : "";
+            return (200, new { mensaje = $"Limpieza completada. Se eliminaron {borrados} egresados sin deudas." + warning });
+        }
+
+        public async Task<(int StatusCode, object Data)> SincronizarFotosAsync(string rootPath)
+        {
+            string carpetaDestino = Path.Combine(rootPath, "AlmacenPrivado", "fotos_alumnos");
+            if (!Directory.Exists(carpetaDestino)) return (400, new { mensaje = "No existe la carpeta 'fotos_alumnos' en la bóveda. Sube al menos una foto desde el sistema para que se cree automáticamente." });
+
+            var archivos = Directory.GetFiles(carpetaDestino);
+            int vinculadas = 0; int ignoradas = 0;
+
+            foreach (var rutaFisica in archivos)
+            {
+                string nombreConExt = Path.GetFileName(rutaFisica);
+                string matriculaExtraida = Path.GetFileNameWithoutExtension(rutaFisica);
+
+                var alumno = await _context.Usuarios.FirstOrDefaultAsync(u => u.Matricula == matriculaExtraida);
+                if (alumno != null)
+                {
+                    string nuevaRuta = $"/api/Usuarios/foto/alumnos/{nombreConExt}";
+                    if (alumno.FotoUrl != nuevaRuta) { alumno.FotoUrl = nuevaRuta; vinculadas++; }
+                }
+                else { ignoradas++; }
+            }
+
+            if (vinculadas > 0) await _context.SaveChangesAsync();
+            return (200, new { mensaje = "Sincronización terminada con éxito.", vinculadas = vinculadas, ignoradas = ignoradas });
+        }
+
+        public async Task<(int StatusCode, object Data)> SubirFotoPersonalAsync(string username, IFormFile foto, string rootPath)
+        {
+            if (foto == null || foto.Length == 0) return (400, new { mensaje = "No se recibió ninguna imagen." });
+
+            var personal = await _context.Usuarios.FirstOrDefaultAsync(u => u.Username == username && u.Rol != "Alumno");
+            if (personal == null) return (404, new { mensaje = "Usuario no encontrado." });
+
+            var ext = Path.GetExtension(foto.FileName).ToLowerInvariant();
+            if (ext != ".jpg" && ext != ".jpeg" && ext != ".png") return (400, new { mensaje = "Solo se permiten imágenes JPG o PNG." });
+
+            string carpetaDestino = Path.Combine(rootPath, "AlmacenPrivado", "fotos_personal");
+            if (!Directory.Exists(carpetaDestino)) Directory.CreateDirectory(carpetaDestino);
+
+            var archivosExistentes = Directory.GetFiles(carpetaDestino, $"{username}.*");
+            foreach (var archivoViejo in archivosExistentes) System.IO.File.Delete(archivoViejo);
+
+            string nombreArchivo = $"{username}{ext}";
+            string rutaCompleta = Path.Combine(carpetaDestino, nombreArchivo);
+
+            using (var stream = new FileStream(rutaCompleta, FileMode.Create))
+            {
+                await foto.CopyToAsync(stream);
+            }
+
+            personal.FotoUrl = $"/api/Usuarios/foto/personal/{nombreArchivo}";
+            await _context.SaveChangesAsync();
+            return (200, new { mensaje = "Foto de perfil actualizada.", fotoUrl = personal.FotoUrl });
+        }
+
+        public async Task<(int StatusCode, object Data)> CambiarPasswordAsync(CambioPasswordDto datos)
+        {
+            var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Username == datos.Username);
+            if (usuario == null) return (404, new { mensaje = "Usuario no encontrado." });
+
+            bool passwordCorrecta = false;
+            if (usuario.PasswordHash.StartsWith("$2")) passwordCorrecta = BCrypt.Net.BCrypt.Verify(datos.PasswordActual, usuario.PasswordHash);
+            else passwordCorrecta = (usuario.PasswordHash == datos.PasswordActual);
+
+            if (!passwordCorrecta) return (400, new { mensaje = "La contraseña actual es incorrecta." });
+
+            usuario.PasswordHash = BCrypt.Net.BCrypt.HashPassword(datos.PasswordNueva);
+            await _context.SaveChangesAsync();
+            return (200, new { mensaje = "Contraseña actualizada correctamente." });
+        }
+
+        public async Task<(int StatusCode, string MimeType, string RutaCompleta, string ErrorMessage)> ObtenerFotoProtegidaAsync(string tipo, string nombreArchivo, string token, string rootPath)
+        {
+            if (string.IsNullOrEmpty(token)) return (401, null, null, "Acceso denegado. Falta token de seguridad.");
+
+            bool accesoPermitido = await _context.Usuarios.AnyAsync(u => u.TokenSesion == token);
+            if (!accesoPermitido) return (401, null, null, "Sesión inválida o expirada.");
+
+            if (tipo != "alumnos" && tipo != "personal") return (404, null, null, "No encontrado");
+
+            string rutaCompleta = Path.Combine(rootPath, "AlmacenPrivado", $"fotos_{tipo}", nombreArchivo);
+            if (!System.IO.File.Exists(rutaCompleta)) return (404, null, null, "No encontrado");
+
+            var ext = Path.GetExtension(rutaCompleta).ToLowerInvariant();
+            string mimeType = ext == ".png" ? "image/png" : "image/jpeg";
+
+            return (200, mimeType, rutaCompleta, null);
+        }
+    }
+}
